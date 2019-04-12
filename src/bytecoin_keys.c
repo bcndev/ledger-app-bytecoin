@@ -5,10 +5,6 @@
 
 static const char address_str[] = "address";
 
-static const char secret_scalar_str[] = "output_secret_point"; // yep, the strings are messed up, but the code is released already in the Amethyst
-static const char secret_point_str[]  = "output_secret_scalar";
-static const char address_type_str[]  = "address_type";
-
 void derive_from_seed_to_hash(const hash_t* seed, const void* buf, size_t len, hash_t* result)
 {
     keccak_hasher_t hasher;
@@ -70,37 +66,17 @@ void generate_hd_secret_key(const secret_key_t* a0, const public_key_t* A_plus_s
     ecaddm(&delta_secret_key, a0, result);
 }
 
-void generate_output_secrets(const hash_t* output_det_key, secret_key_t* output_secret_scalar, elliptic_curve_point_t* output_secret_point, uint8_t* output_secret_address_type)
+void generate_output_secrets(const hash_t* output_seed, secret_key_t* output_secret_scalar, public_key_t* output_secret_point, uint8_t* output_secret_address_type)
 {
-    hash_t hash;
+    reduce32(output_seed, output_secret_scalar);
 
-    {
-        keccak_hasher_t hasher;
-        keccak_init(&hasher);
-        keccak_update(&hasher, output_det_key->data, sizeof(output_det_key->data));
-        keccak_update(&hasher, secret_scalar_str, sizeof(secret_scalar_str) - 1);
-        keccak_final(&hasher, &hash);
-    }
-    reduce32(&hash, output_secret_scalar);
-
-    {
-        keccak_hasher_t hasher;
-        keccak_init(&hasher);
-        keccak_update(&hasher, output_det_key->data, sizeof(output_det_key->data));
-        keccak_update(&hasher, secret_point_str, sizeof(secret_point_str) - 1);
-        keccak_final(&hasher, &hash);
-    }
-    ge_fromfe_frombytes(&hash, output_secret_point);
+    ge_fromfe_frombytes(output_seed, output_secret_point);
     ecmul_8(output_secret_point, output_secret_point);
 
-    {
-        keccak_hasher_t hasher;
-        keccak_init(&hasher);
-        keccak_update(&hasher, output_det_key->data, sizeof(output_det_key->data));
-        keccak_update(&hasher, address_type_str, sizeof(address_type_str) - 1);
-        keccak_final(&hasher, &hash);
-    }
-    *output_secret_address_type = hash.data[0];
+    hash_t output_secret_address_type_hash;
+    fast_hash(output_seed->data, sizeof(output_seed->data), &output_secret_address_type_hash);
+
+    *output_secret_address_type = output_secret_address_type_hash.data[0];
 }
 
 void linkable_derive_output_public_key(

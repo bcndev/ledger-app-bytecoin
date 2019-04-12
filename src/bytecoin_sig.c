@@ -22,6 +22,7 @@ void init_signing_state(bytecoin_signing_state_t* sig_state)
 {
     os_memset(sig_state, 0, sizeof(bytecoin_signing_state_t));
     sig_state->status = SIG_STATE_FINISHED;
+    sig_state->dst_address_set = false;
 }
 
 static
@@ -76,6 +77,7 @@ void sig_add_input_start(
     const bool call_is_expected = (sig_state->status == SIG_STATE_EXPECT_INPUT_START && sig_state->inputs_counter < sig_state->inputs_num);
     if (!call_is_expected)
     {
+        PRINTF("sig_add_input_start abort\n");
         THROW(SW_COMMAND_NOT_ALLOWED);
         return;
     }
@@ -100,14 +102,15 @@ void sig_add_input_start(
     sig_state->status = SIG_STATE_EXPECT_INPUT_INDEXES;
 }
 
-void sign_add_input_indexes(
+void sig_add_input_indexes(
         bytecoin_signing_state_t* sig_state,
         const uint32_t* output_indexes,
         uint32_t output_indexes_length)
 {
-    const bool call_is_expected = (sig_state->status == SIG_STATE_EXPECT_INPUT_INDEXES && sig_state->mixin_counter + output_indexes_length > sig_state->mixin_num);
+    const bool call_is_expected = (sig_state->status == SIG_STATE_EXPECT_INPUT_INDEXES && sig_state->mixin_counter + output_indexes_length <= sig_state->mixin_num);
     if (!call_is_expected)
     {
+        PRINTF("sig_add_input_indexes abort\n");
         THROW(SW_COMMAND_NOT_ALLOWED);
         return;
     }
@@ -118,12 +121,13 @@ void sign_add_input_indexes(
         keccak_update_varint(&sig_state->tx_inputs_hasher, output_indexes[j]);
     }
     sig_state->mixin_counter += output_indexes_length;
+    PRINTF("mixin_counter = %d, mixin_num = %d, output_indexes_length = %d\n", sig_state->mixin_counter, sig_state->mixin_num, output_indexes_length);
     if (sig_state->mixin_counter < sig_state->mixin_num)
         return;
     sig_state->status = SIG_STATE_EXPECT_INPUT_FINISH;
 }
 
-void sign_add_input_finish(
+void sig_add_input_finish(
         bytecoin_signing_state_t* sig_state,
         const wallet_keys_t* wallet_keys,
         const uint8_t* output_secret_hash_arg,
@@ -133,6 +137,7 @@ void sign_add_input_finish(
     const bool call_is_expected = (sig_state->status == SIG_STATE_EXPECT_INPUT_FINISH);
     if (!call_is_expected)
     {
+        PRINTF("sig_add_input_finish abort\n");
         THROW(SW_COMMAND_NOT_ALLOWED);
         return;
     }
@@ -308,6 +313,7 @@ int sig_add_output(
                    encrypted_secret,
                    encrypted_address_type);
 
+
     if (++sig_state->outputs_counter < sig_state->outputs_num)
         return SW_NO_ERROR;
 
@@ -328,10 +334,14 @@ int sig_add_output(
     keccak_update_varint(&sig_state->tx_prefix_hasher, sig_state->extra_size);
 
     sig_state->status = SIG_STATE_EXPECT_USER_CONFIRMATION;
-    return user_confirm_tx(sig_state->dst_amount, dst_address_s, dst_address_s_v, dst_address_tag, fee);
+    sig_state->dst_fee = fee;
+    return user_confirm_tx(/*sig_state->dst_amount, dst_address_s, dst_address_s_v, dst_address_tag, fee*/);
+
+//    sig_add_output_final(sig_state); // DEBUG: bypass the confirmation
+//    return SW_NO_ERROR;
 }
 
-void sig_add_ouput_final(bytecoin_signing_state_t* sig_state)
+void sig_add_output_final(bytecoin_signing_state_t* sig_state)
 {
     const bool call_is_expected = (sig_state->status == SIG_STATE_EXPECT_USER_CONFIRMATION && sig_state->outputs_counter == sig_state->outputs_num);
     if (!call_is_expected)
@@ -416,12 +426,14 @@ void calc_yz(
 {
     secret_key_t kr;
     generate_sign_secret(wallet_keys, sig_state->inputs_counter, kr_str, &sig_state->random_seed, &kr);
+
+    {
+        elliptic_curve_point_t G_plus_B;
+        ecadd_G(b_coin, &G_plus_B);
+        ecmul(&G_plus_B, &kr, y);
+    }
     elliptic_curve_point_t hash_pubs_sec;
     hash_point_to_good_point(output_public_key, &hash_pubs_sec);
-
-    elliptic_curve_point_t G_plus_B;
-    ecadd_G(b_coin, &G_plus_B);
-    ecmul(&G_plus_B, &kr, y);
     ecmul(&hash_pubs_sec, &kr, z);
 }
 
@@ -448,15 +460,19 @@ void sig_step_a(
         return;
     }
 
-    elliptic_curve_scalar_t output_secret_hash;
-    hash_to_scalar(output_secret_hash_arg, output_secret_hash_arg_len, &output_secret_hash);
     secret_key_t inv_output_secret_hash;
-    invert32(&output_secret_hash, &inv_output_secret_hash);
+    {
+        elliptic_curve_scalar_t output_secret_hash;
+        hash_to_scalar(output_secret_hash_arg, output_secret_hash_arg_len, &output_secret_hash);
+        invert32(&output_secret_hash, &inv_output_secret_hash);
+    }
 
-    secret_key_t address_audit_secret_key;
-    prepare_address_secret(wallet_keys, address_index, &address_audit_secret_key);
     secret_key_t output_secret_key_a;
-    ecmulm(&address_audit_secret_key, &inv_output_secret_hash, &output_secret_key_a);
+    {
+        secret_key_t address_audit_secret_key;
+        prepare_address_secret(wallet_keys, address_index, &address_audit_secret_key);
+        ecmulm(&address_audit_secret_key, &inv_output_secret_hash, &output_secret_key_a);
+    }
     secret_key_t output_secret_key_s;
     ecmulm(&wallet_keys->spend_secret_key, &inv_output_secret_hash, &output_secret_key_s);
     public_key_t output_public_key;
@@ -473,9 +489,11 @@ void sig_step_a(
     calc_sig_p(&b_coin, &output_secret_key_a, &output_secret_key_s, sig_p);
     keccak_update(&sig_state->tx_inputs_hasher, sig_p->data, sizeof(sig_p->data));
 
-    public_key_t x;
-    calc_x(sig_state, wallet_keys, &b_coin, &x);
-    keccak_update(&sig_state->tx_inputs_hasher, x.data, sizeof(x.data));
+    {
+        public_key_t x;
+        calc_x(sig_state, wallet_keys, &b_coin, &x);
+        keccak_update(&sig_state->tx_inputs_hasher, x.data, sizeof(x.data));
+    }
 
     calc_yz(sig_state, wallet_keys, &output_public_key, &b_coin, y, z);
 
@@ -536,46 +554,52 @@ void sig_step_b(
         return;
     }
 
-    elliptic_curve_scalar_t output_secret_hash;
-    hash_to_scalar(output_secret_hash_arg, output_secret_hash_arg_len, &output_secret_hash);
     secret_key_t inv_output_secret_hash;
-    invert32(&output_secret_hash, &inv_output_secret_hash);
+    {
+        elliptic_curve_scalar_t output_secret_hash;
+        hash_to_scalar(output_secret_hash_arg, output_secret_hash_arg_len, &output_secret_hash);
+        invert32(&output_secret_hash, &inv_output_secret_hash);
+    }
 
-    secret_key_t address_audit_secret_key;
-    prepare_address_secret(wallet_keys, address_index, &address_audit_secret_key);
     secret_key_t output_secret_key_a;
-    ecmulm(&address_audit_secret_key, &inv_output_secret_hash, &output_secret_key_a);
+    {
+        secret_key_t address_audit_secret_key;
+        prepare_address_secret(wallet_keys, address_index, &address_audit_secret_key);
+        ecmulm(&address_audit_secret_key, &inv_output_secret_hash, &output_secret_key_a);
+    }
     secret_key_t output_secret_key_s;
     ecmulm(&wallet_keys->spend_secret_key, &inv_output_secret_hash, &output_secret_key_s);
 
     keccak_update(&sig_state->tx_prefix_hasher, inv_output_secret_hash.data, sizeof(inv_output_secret_hash.data));
     keccak_update_varint(&sig_state->tx_prefix_hasher, address_index);
 
-    secret_key_t ka;
-    secret_key_t ks;
-    secret_key_t kr;
-    generate_sign_secret(wallet_keys, sig_state->inputs_counter, ka_str, &sig_state->random_seed, &ka);
-    generate_sign_secret(wallet_keys, sig_state->inputs_counter, ks_str, &sig_state->random_seed, &ks);
-    generate_sign_secret(wallet_keys, sig_state->inputs_counter, kr_str, &sig_state->random_seed, &kr);
-
-    secret_key_t rsig_rs;
-    secret_key_t rsig_ra;
-    secret_key_t rsig_my_rr;
-
-    elliptic_curve_scalar_t rs_sub;
-    elliptic_curve_scalar_t ra_add;
-    elliptic_curve_scalar_t rr_sub;
-    ecmulm(&sig_state->c0, &output_secret_key_s, &rs_sub);
-    ecmulm(&sig_state->c0, &output_secret_key_a, &ra_add);
-    ecmulm(my_c, &output_secret_key_a, &rr_sub);
-
-    ecsubm(&ks, &rs_sub, &rsig_rs);
-    ecaddm(&ka, &ra_add, &rsig_ra);
-    ecsubm(&kr, &rr_sub, &rsig_my_rr);
-
-    encrypt_scalar(&sig_state->encryption_key, &rsig_my_rr, sig_state->inputs_counter, rr_str, sig_my_rr);
-    encrypt_scalar(&sig_state->encryption_key, &rsig_rs,    sig_state->inputs_counter, rs_str, sig_rs);
-    encrypt_scalar(&sig_state->encryption_key, &rsig_ra,    sig_state->inputs_counter, ra_str, sig_ra);
+    {
+        secret_key_t ks;
+        generate_sign_secret(wallet_keys, sig_state->inputs_counter, ks_str, &sig_state->random_seed, &ks);
+        elliptic_curve_scalar_t rs_sub;
+        ecmulm(&sig_state->c0, &output_secret_key_s, &rs_sub);
+        secret_key_t rsig_rs;
+        ecsubm(&ks, &rs_sub, &rsig_rs);
+        encrypt_scalar(&sig_state->encryption_key, &rsig_rs, sig_state->inputs_counter, rs_str, sig_rs);
+    }
+    {
+        secret_key_t ka;
+        generate_sign_secret(wallet_keys, sig_state->inputs_counter, ka_str, &sig_state->random_seed, &ka);
+        elliptic_curve_scalar_t ra_add;
+        ecmulm(&sig_state->c0, &output_secret_key_a, &ra_add);
+        secret_key_t rsig_ra;
+        ecaddm(&ka, &ra_add, &rsig_ra);
+        encrypt_scalar(&sig_state->encryption_key, &rsig_ra, sig_state->inputs_counter, ra_str, sig_ra);
+    }
+    {
+        secret_key_t kr;
+        generate_sign_secret(wallet_keys, sig_state->inputs_counter, kr_str, &sig_state->random_seed, &kr);
+        elliptic_curve_scalar_t rr_sub;
+        ecmulm(my_c, &output_secret_key_a, &rr_sub);
+        secret_key_t rsig_my_rr;
+        ecsubm(&kr, &rr_sub, &rsig_my_rr);
+        encrypt_scalar(&sig_state->encryption_key, &rsig_my_rr, sig_state->inputs_counter, rr_str, sig_my_rr);
+    }
 
     if (++sig_state->inputs_counter < sig_state->inputs_num)
     {
@@ -588,58 +612,20 @@ void sig_step_b(
         os_memset(sig_state->encryption_key.data, 0, sizeof(sig_state->encryption_key.data));
     *e_key = sig_state->encryption_key;
 
-//    secret_key_t address_audit_secret_key;
-//    prepare_address_secret(wallet_keys, address_index, &address_audit_secret_key);
-
-//    secret_key_t output_secret_key_a;
-//    ecmulm(&address_audit_secret_key, inv_output_secret_hash, &output_secret_key_a);
-
-//    secret_key_t output_secret_key_s;
-//    ecmulm(&wallet_keys->spend_secret_key, inv_output_secret_hash, &output_secret_key_s);
-
-//    secret_key_t ka;
-//    secret_key_t kb;
-//    secret_key_t kc;
-//    generate_sign_secret(wallet_keys, sig_state->inputs_counter, ka_str, &sig_state->random_seed, &ka);
-//    generate_sign_secret(wallet_keys, sig_state->inputs_counter, kb_str, &sig_state->random_seed, &kb);
-//    generate_sign_secret(wallet_keys, sig_state->inputs_counter, kc_str, &sig_state->random_seed, &kc);
-
-//    elliptic_curve_scalar_t rb_sub;
-//    elliptic_curve_scalar_t rc_add;
-//    elliptic_curve_scalar_t ra_sub;
-//    ecmulm(&sig_state->c0, &output_secret_key_s, &rb_sub);
-//    ecmulm(&sig_state->c0, &output_secret_key_a, &rc_add);
-//    ecmulm(my_c, &output_secret_key_a, &ra_sub);
-
-//    ecsubm(&kb, &rb_sub, sig_rb);
-//    ecaddm(&kc, &rc_add, sig_rc);
-//    ecsubm(&ka, &ra_sub, sig_my_ra);
-
-//    if (++sig_state->inputs_counter < sig_state->inputs_num)
-//        return;
-//    sig_state->status = SIG_STATE_FINISHED;
-
-// TODO: do we use sig_stage after this?    reset_sig_state(sig_state);
+    sig_state->status = SIG_STATE_FINISHED;
 }
 
 void sig_proof_start(
         bytecoin_signing_state_t* sig_state,
-        const void* buf,
         uint32_t len)
 {
     init_signing_state(sig_state);
     sig_state->inputs_num = 1;
+    sig_state->extra_size = len;
 
-    keccak_update_byte(&sig_state->tx_prefix_hasher, 0);
-    keccak_update     (&sig_state->tx_prefix_hasher, buf, len);
-    hash_t tx_prefix_hash;
-    keccak_final(&sig_state->tx_prefix_hasher, &tx_prefix_hash);
     keccak_init(&sig_state->tx_prefix_hasher);
-
-    generate_random_keys(&sig_state->random_seed, &sig_state->encryption_key);
-
-    keccak_update(&sig_state->tx_inputs_hasher, tx_prefix_hash.data, sizeof(tx_prefix_hash.data));
-    sig_state->status = SIG_STATE_EXPECT_STEP_A;
+    keccak_update_byte(&sig_state->tx_prefix_hasher, 0);
+    sig_state->status = SIG_STATE_EXPECT_EXTRA_CHUNK;
 }
 
 

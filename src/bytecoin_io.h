@@ -44,11 +44,7 @@ typedef struct confirm_tx_params_s
 
 typedef struct io_buffer_s
 {
-    union
-    {
-        uint8_t data[BYTECOIN_IO_BUFFER_SIZE];
-        confirm_tx_params_t confirm_tx_params;
-    };
+    uint8_t data[BYTECOIN_IO_BUFFER_SIZE];
     uint16_t length;
     uint16_t offset;
 } io_buffer_t;
@@ -71,7 +67,7 @@ elliptic_curve_scalar_t fetch_scalar_from_io_buffer(io_buffer_t* iobuf);
 hash_t fetch_hash_from_io_buffer(io_buffer_t* iobuf);
 
 //void insert_reversed_bytes_to_io_buffer(io_buffer_t* iobuf, const void* buf, uint16_t len);
-//void insert_bytes_to_io_buffer(io_buffer_t* iobuf, const void* buf, uint16_t len);
+void insert_bytes_to_io_buffer(io_buffer_t* iobuf, const void* buf, uint16_t len);
 void insert_var_to_io_buffer(io_buffer_t* iobuf, uint64_t var, uint16_t len);
 void insert_scalar_to_io_buffer(io_buffer_t* iobuf, const elliptic_curve_scalar_t* s);
 void insert_point_to_io_buffer(io_buffer_t* iobuf, const elliptic_curve_point_t* P);

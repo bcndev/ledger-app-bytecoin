@@ -7,7 +7,7 @@
 #define INS_RESET 0x02
 
 #define BYTECOIN_MAX_OUTPUT_INDEXES 16
-#define BYTECOIN_MAX_BUFFER_SIZE    255
+#define BYTECOIN_MAX_BUFFER_SIZE    128
 
 // INS must be even and cannot start with 9 or 6
 #define INS_GET_WALLET_KEYS           0x30
@@ -27,6 +27,7 @@
 #define INS_SIG_GET_C0                0x4c
 #define INS_SIG_STEP_B                0x4e
 #define INS_SIG_PROOF_START           0x50
+#define INS_GET_APP_INFO              0x52
 
 #define INS_GET_RESPONSE              0xc0
 

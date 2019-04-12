@@ -109,25 +109,19 @@ void generate_keyimage_for_address(
         uint32_t address_index,
         keyimage_t* keyimage)
 {
-    PRINTF("buf: %.*h, len=%d\n", len, buf, len);
     elliptic_curve_scalar_t output_secret_hash;
     hash_to_scalar(buf, len, &output_secret_hash);
-    PRINT_PRIMITIVE(output_secret_hash);
     secret_key_t inv_output_secret_hash;
     invert32(&output_secret_hash, &inv_output_secret_hash);
-    PRINT_PRIMITIVE(inv_output_secret_hash);
 
     secret_key_t address_audit_secret_key;
     prepare_address_secret(wallet_keys, address_index, &address_audit_secret_key);
     secret_key_t output_secret_key_a;
     ecmulm(&address_audit_secret_key, &inv_output_secret_hash, &output_secret_key_a);
-    PRINT_PRIMITIVE(output_secret_key_a);
     secret_key_t output_secret_key_s;
     ecmulm(&wallet_keys->spend_secret_key, &inv_output_secret_hash, &output_secret_key_s);
-    PRINT_PRIMITIVE(output_secret_key_s);
     public_key_t output_public_key;
     secret_keys_to_public_key(&output_secret_key_a, &output_secret_key_s, &output_public_key);
-    PRINT_PRIMITIVE(output_public_key);
     generate_keyimage(&output_public_key, &output_secret_key_a, keyimage);
 }
 
@@ -183,7 +177,7 @@ void encrypt_scalar(
         keccak_final(&hasher, result);
     }
     for (uint32_t j = 0; j < sizeof(scalar->data); ++j)
-        result->data[j] ^= scalar->data[j];
+        result->data[j] ^= scalar->data[sizeof(scalar->data) - j - 1];
 }
 
 void generate_random_keys(

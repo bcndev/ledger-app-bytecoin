@@ -7,6 +7,31 @@
 
 #include "bytecoin_ui.h"
 
+int bytecoin_apdu_get_ledger_app_info(void)
+{
+    reset_io_buffer(&G_bytecoin_vstate.io_buffer);
+
+    const uint8_t major_version = BYTECOIN_VERSION_M;
+    const uint8_t minor_version = BYTECOIN_VERSION_N;
+    const uint8_t patch_version = BYTECOIN_VERSION_P;
+
+    insert_var(major_version);
+    insert_var(minor_version);
+    insert_var(patch_version);
+
+    const uint8_t app_name_size = sizeof(XSTR(BYTECOIN_NAME)) - 1;
+    insert_var(app_name_size);
+    insert_bytes_to_io_buffer(&G_bytecoin_vstate.io_buffer, XSTR(BYTECOIN_NAME), app_name_size);
+    const uint8_t app_version_size = sizeof(XSTR(BYTECOIN_VERSION)) - 1;
+    insert_var(app_version_size);
+    insert_bytes_to_io_buffer(&G_bytecoin_vstate.io_buffer, XSTR(BYTECOIN_VERSION), app_version_size);
+    const uint8_t app_specversion_size = sizeof(XSTR(BYTECOIN_SPEC_VERSION)) - 1;
+    insert_var(app_specversion_size);
+    insert_bytes_to_io_buffer(&G_bytecoin_vstate.io_buffer, XSTR(BYTECOIN_SPEC_VERSION), app_specversion_size);
+
+    return SW_NO_ERROR;
+}
+
 int bytecoin_apdu_get_wallet_keys(void)
 {
     reset_io_buffer(&G_bytecoin_vstate.io_buffer);
@@ -93,44 +118,94 @@ int bytecoin_apdu_sig_start(void)
     return SW_NO_ERROR;
 }
 
-int bytecoin_apdu_sig_add_input(void)
+int bytecoin_apdu_sig_add_input_start(void)
 {
-    const uint64_t amount             = fetch_var(uint64_t);
-    const uint32_t output_indexes_len = fetch_var(uint32_t);
+    const uint64_t amount = fetch_var(uint64_t);
+    const uint32_t output_indexes_count   = fetch_var(uint32_t);
+    reset_io_buffer(&G_bytecoin_vstate.io_buffer);
 
+    sig_add_input_start(&G_bytecoin_vstate.sig_state, amount, output_indexes_count);
+
+    return SW_NO_ERROR;
+
+}
+
+int bytecoin_apdu_sig_add_input_indexes(void)
+{
+    const uint8_t output_indexes_len = fetch_var(uint8_t);
     if (output_indexes_len > BYTECOIN_MAX_OUTPUT_INDEXES)
         THROW(SW_NOT_ENOUGH_MEMORY);
     uint32_t output_indexes[BYTECOIN_MAX_OUTPUT_INDEXES];
     for (uint32_t i = 0; i < output_indexes_len; ++i)
         output_indexes[i] = fetch_var_from_io_buffer(&G_bytecoin_vstate.io_buffer, sizeof(output_indexes[0]));
-
-    const secret_key_t inv_output_secret_hash = fetch_secret_key();
-    const uint32_t address_index              = fetch_var(uint32_t);
-
-    PRINTF("amount = %d, output_indexes_len = %d\n", (int)amount, output_indexes_len);
     reset_io_buffer(&G_bytecoin_vstate.io_buffer);
 
-    sig_add_input(
-                &G_bytecoin_vstate.sig_state,
-                &G_bytecoin_vstate.wallet_keys,
-                amount,
-                output_indexes,
-                output_indexes_len,
-                &inv_output_secret_hash,
-                address_index);
+    sig_add_input_indexes(&G_bytecoin_vstate.sig_state, output_indexes, output_indexes_len);
 
     return SW_NO_ERROR;
 }
 
+int bytecoin_apdu_sig_add_input_finish(void)
+{
+    const uint8_t len = fetch_var(uint8_t);
+    if (len > BYTECOIN_MAX_BUFFER_SIZE)
+        THROW(SW_NOT_ENOUGH_MEMORY);
+    uint8_t output_secret_hash_arg[BYTECOIN_MAX_BUFFER_SIZE];
+    fetch_bytes_from_io_buffer(&G_bytecoin_vstate.io_buffer, output_secret_hash_arg, len);
+    const uint32_t address_index = fetch_var(uint32_t);
+    reset_io_buffer(&G_bytecoin_vstate.io_buffer);
+
+    sig_add_input_finish(&G_bytecoin_vstate.sig_state, &G_bytecoin_vstate.wallet_keys, output_secret_hash_arg, len, address_index);
+
+    return SW_NO_ERROR;
+}
+
+//int bytecoin_apdu_sig_add_input(void)
+//{
+//    const uint64_t amount             = fetch_var(uint64_t);
+//    const uint32_t output_indexes_len = fetch_var(uint32_t);
+
+//    if (output_indexes_len > BYTECOIN_MAX_OUTPUT_INDEXES)
+//        THROW(SW_NOT_ENOUGH_MEMORY);
+//    uint32_t output_indexes[BYTECOIN_MAX_OUTPUT_INDEXES];
+//    for (uint32_t i = 0; i < output_indexes_len; ++i)
+//        output_indexes[i] = fetch_var_from_io_buffer(&G_bytecoin_vstate.io_buffer, sizeof(output_indexes[0]));
+
+//    const secret_key_t inv_output_secret_hash = fetch_secret_key();
+//    const uint32_t address_index              = fetch_var(uint32_t);
+
+//    PRINTF("amount = %d, output_indexes_len = %d\n", (int)amount, output_indexes_len);
+//    reset_io_buffer(&G_bytecoin_vstate.io_buffer);
+
+//    sig_add_input(
+//                &G_bytecoin_vstate.sig_state,
+//                &G_bytecoin_vstate.wallet_keys,
+//                amount,
+//                output_indexes,
+//                output_indexes_len,
+//                &inv_output_secret_hash,
+//                address_index);
+
+//    return SW_NO_ERROR;
+//}
+
 int bytecoin_apdu_sig_add_output(void)
 {
     const uint8_t change                = fetch_var(uint8_t);
-    const uint64_t amount               = fetch_var(uint64_t);
+    uint64_t amount               = fetch_var(uint64_t);
     const uint32_t change_address_index = fetch_var(uint32_t);
     const uint8_t dst_address_tag       = fetch_var(uint8_t);
     const public_key_t dst_address_s    = fetch_public_key();
     const public_key_t dst_address_s_v  = fetch_public_key();
     reset_io_buffer(&G_bytecoin_vstate.io_buffer);
+
+    PRINTF("change=%d\n", change);
+    PRINTF("amount=%d\n", (int)amount);
+    PRINTF("change_address_index=%d\n", change_address_index);
+    PRINTF("dst_address_tag=%d\n", dst_address_tag);
+    PRINT_PRIMITIVE(dst_address_s);
+    PRINT_PRIMITIVE(dst_address_s_v);
+
 
     public_key_t public_key;
     public_key_t encrypted_secret;
@@ -162,13 +237,13 @@ int bytecoin_apdu_sig_add_output(void)
 
 int bytecoin_apdu_sig_add_output_final(void)
 {
-    sig_add_ouput_final(&G_bytecoin_vstate.sig_state);
+    sig_add_output_final(&G_bytecoin_vstate.sig_state);
     return SW_NO_ERROR;
 }
 
 int bytecoin_apdu_sig_add_extra(void)
 {
-    const uint32_t len = fetch_var(uint32_t);
+    const uint8_t len = fetch_var(uint8_t);
 
     if (len > BYTECOIN_MAX_BUFFER_SIZE)
         THROW(SW_NOT_ENOUGH_MEMORY);
@@ -183,12 +258,15 @@ int bytecoin_apdu_sig_add_extra(void)
 
 int bytecoin_apdu_sig_step_a(void)
 {
-    const uint32_t len = fetch_var(uint32_t);
+    const uint8_t len = fetch_var(uint8_t);
+    PRINTF("len=%d\n", (int)len);
     if (len > BYTECOIN_MAX_BUFFER_SIZE)
         THROW(SW_NOT_ENOUGH_MEMORY);
     uint8_t output_secret_hash_arg[BYTECOIN_MAX_BUFFER_SIZE];
     fetch_bytes_from_io_buffer(&G_bytecoin_vstate.io_buffer, output_secret_hash_arg, len);
+    PRINTF("output_secret_hash_arg: %.*h\n", len, output_secret_hash_arg);
     const uint32_t address_index = fetch_var(uint32_t);
+    PRINTF("address_index=%d\n", address_index);
     reset_io_buffer(&G_bytecoin_vstate.io_buffer);
 
     elliptic_curve_point_t sig_p;
@@ -204,6 +282,10 @@ int bytecoin_apdu_sig_step_a(void)
                &y,
                &z);
 
+    PRINT_PRIMITIVE(sig_p);
+    PRINT_PRIMITIVE(y);
+    PRINT_PRIMITIVE(z);
+
     insert_point(sig_p);
     insert_point(y);
     insert_point(z);
@@ -213,7 +295,7 @@ int bytecoin_apdu_sig_step_a(void)
 
 int bytecoin_apdu_sig_step_a_more_data(void)
 {
-    const uint32_t len = fetch_var(uint32_t);
+    const uint8_t len = fetch_var(uint8_t);
     if (len > BYTECOIN_MAX_BUFFER_SIZE)
         THROW(SW_NOT_ENOUGH_MEMORY);
     uint8_t buf[BYTECOIN_MAX_BUFFER_SIZE];
@@ -239,7 +321,7 @@ int bytecoin_apdu_sig_get_c0(void)
 
 int bytecoin_apdu_sig_step_b(void)
 {
-    const uint32_t len = fetch_var(uint32_t);
+    const uint8_t len = fetch_var(uint8_t);
     if (len > BYTECOIN_MAX_BUFFER_SIZE)
         THROW(SW_NOT_ENOUGH_MEMORY);
     uint8_t output_secret_hash_arg[BYTECOIN_MAX_BUFFER_SIZE];
@@ -310,13 +392,9 @@ int bytecoin_apdu_export_view_only_final(bool view_outgoing_addresses)
 int bytecoin_apdu_sig_proof_start(void)
 {
     const uint32_t len = fetch_var(uint32_t);
-    if (len > BYTECOIN_MAX_BUFFER_SIZE)
-        THROW(SW_NOT_ENOUGH_MEMORY);
-    uint8_t buf[BYTECOIN_MAX_BUFFER_SIZE];
-    fetch_bytes_from_io_buffer(&G_bytecoin_vstate.io_buffer, buf, len);
     reset_io_buffer(&G_bytecoin_vstate.io_buffer);
 
-    sig_proof_start(&G_bytecoin_vstate.sig_state, buf, len);
+    sig_proof_start(&G_bytecoin_vstate.sig_state, len);
 
     return SW_NO_ERROR;
 }

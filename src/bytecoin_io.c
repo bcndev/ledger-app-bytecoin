@@ -52,7 +52,6 @@ void fetch_bytes_from_io_buffer(io_buffer_t* iobuf, void* buf, uint16_t len)
     iobuf->offset += len;
 }
 
-static
 void insert_bytes_to_io_buffer(io_buffer_t* iobuf, const void* buf, uint16_t len)
 {
     make_hole(iobuf, len);
@@ -306,11 +305,6 @@ unsigned char io_event(unsigned char channel) {
     UX_BUTTON_PUSH_EVENT(G_io_seproxyhal_spi_buffer);
     break;
 
-    // other events are propagated to the UX just in case
-  default:
-    UX_DEFAULT_EVENT();
-    break;
-
   case SEPROXYHAL_TAG_DISPLAY_PROCESSED_EVENT:
     UX_DISPLAYED_EVENT({});
     break;
@@ -323,6 +317,11 @@ unsigned char io_event(unsigned char channel) {
       }
     });
     break;
+    // other events are propagated to the UX just in case
+  default:
+    UX_DEFAULT_EVENT();
+    break;
+
   }
 
   // close the event if not done previously (by a display or whatever)

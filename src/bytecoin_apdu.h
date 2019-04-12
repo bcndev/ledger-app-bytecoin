@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 
+int bytecoin_apdu_get_ledger_app_info(void);
 int bytecoin_apdu_get_wallet_keys(void);
 
 int bytecoin_apdu_scan_outputs(void);

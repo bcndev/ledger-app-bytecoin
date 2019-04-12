@@ -32,6 +32,8 @@ int dispatch(uint8_t cla, uint8_t ins)
         reset_io_buffer(&G_bytecoin_vstate.io_buffer);
         return SW_NO_ERROR;
 
+    case INS_GET_APP_INFO:
+        sw = bytecoin_apdu_get_ledger_app_info(); break;
     case INS_GET_WALLET_KEYS:
         sw = bytecoin_apdu_get_wallet_keys(); break;
     case INS_SCAN_OUTPUTS:
@@ -43,11 +45,11 @@ int dispatch(uint8_t cla, uint8_t ins)
     case INS_SIG_START:
         sw = bytecoin_apdu_sig_start(); break;
     case INS_SIG_ADD_INPUT_START:
-//        sw = bytecoin_apdu_sig_add_input_start(); break;
+        sw = bytecoin_apdu_sig_add_input_start(); break;
     case INS_SIG_ADD_INPUT_INDEXES:
-//        sw = bytecoin_apdu_sig_add_input_indexes(); break;
+        sw = bytecoin_apdu_sig_add_input_indexes(); break;
     case INS_SIG_ADD_INPUT_FINISH:
-//        sw = bytecoin_apdu_sig_add_input_finish(); break;
+        sw = bytecoin_apdu_sig_add_input_finish(); break;
     case INS_SIG_ADD_OUPUT:
         sw = bytecoin_apdu_sig_add_output(); break;
     case INS_SIG_ADD_EXTRA:

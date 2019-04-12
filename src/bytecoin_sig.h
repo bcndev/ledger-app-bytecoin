@@ -39,10 +39,11 @@ typedef struct bytecoin_signing_state_s
     uint64_t inputs_amount;
     uint64_t dst_amount;
     uint64_t change_amount;
+    uint64_t dst_fee;
 
+    uint32_t extra_size;
     uint16_t inputs_num;
     uint16_t outputs_num;
-    uint16_t extra_size;
     uint16_t mixin_num;
 
     uint16_t inputs_counter;
@@ -67,13 +68,21 @@ void sig_start(
         uint32_t outputs_num,
         uint32_t extra_num);
 
-void sig_add_input(
+void sig_add_input_start(
+        bytecoin_signing_state_t* sig_state,
+        uint64_t amount,
+        uint32_t output_indexes_count);
+
+void sig_add_input_indexes(
+        bytecoin_signing_state_t* sig_state,
+        const uint32_t* output_indexes,
+        uint32_t output_indexes_length);
+
+void sig_add_input_finish(
         bytecoin_signing_state_t* sig_state,
         const wallet_keys_t* wallet_keys,
-        uint64_t amount,
-        const uint32_t* output_indexes,
-        uint32_t output_indexes_len,
-        const secret_key_t* inv_output_secret_hash,
+        const uint8_t* output_secret_hash_arg,
+        uint32_t output_secret_hash_arg_len,
         uint32_t address_index);
 
 int sig_add_output(
@@ -89,7 +98,7 @@ int sig_add_output(
         public_key_t* encrypted_secret,
         uint8_t* encrypted_address_type);
 
-void sig_add_ouput_final(bytecoin_signing_state_t* sig_state);
+void sig_add_output_final(bytecoin_signing_state_t* sig_state);
 
 void sig_add_extra(
         bytecoin_signing_state_t* sig_state,
@@ -129,7 +138,6 @@ void sig_step_b(
 
 void sig_proof_start(
         bytecoin_signing_state_t* sig_state,
-        const void* buf,
         uint32_t len);
 
 #endif // BYTECOIN_SIG_H
