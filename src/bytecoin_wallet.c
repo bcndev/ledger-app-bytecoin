@@ -22,6 +22,9 @@ static const char wallet_key_str[]     = "wallet_key";
 static const char bcn_str[] = "bcn";
 #endif
 
+uint32_t G_last_index;
+uint8_t G_last_audit_secret_key[sizeof(secret_key_t)];
+
 void init_wallet_keys(wallet_keys_t* wallet_keys)
 {
     uint8_t bpk[32];
@@ -41,6 +44,9 @@ void init_wallet_keys(wallet_keys_t* wallet_keys)
                 &wallet_keys->audit_key_base_secret_key,
                 &wallet_keys->sH,
                 &wallet_keys->A_plus_sH);
+
+    G_last_index = UINT32_MAX;
+    os_memset(G_last_audit_secret_key, 0, sizeof(G_last_audit_secret_key));
 }
 
 void prepare_address_secret(
@@ -48,13 +54,12 @@ void prepare_address_secret(
         uint32_t address_index,
         secret_key_t* result)
 {
-//    /*static uint32_t last_index = UINT32_MAX;*/
-//    /*static*/ secret_key_t last_audit_secret_key;
-////    if (last_index != address_index)
-        generate_hd_secret_key(&wallet_keys->audit_key_base_secret_key, &wallet_keys->A_plus_sH, address_index, result);
-        PRINTF("prepare_address[%d]=%.*h\n", address_index, sizeof(result->data), result->data);
-//    return /*&*/last_audit_secret_key;
-//    return generate_hd_secret_key(&wallet_keys->audit_key_base_secret_key, &wallet_keys->A_plus_sH, address_index);
+    if (G_last_index != address_index)
+    {
+        generate_hd_secret_key(&wallet_keys->audit_key_base_secret_key, &wallet_keys->A_plus_sH, address_index, (secret_key_t*)G_last_audit_secret_key);
+        G_last_index = address_index;
+    }
+    os_memmove(result->data, G_last_audit_secret_key, sizeof(result->data));
 }
 
 void prepare_address_public(

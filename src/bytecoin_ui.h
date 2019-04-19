@@ -23,6 +23,6 @@ int user_confirm_export_view_only(void);
 // ask user if he/she wants view wallet to view outgoing addresses
 int user_confirm_view_outgoing_addresses(void);
 
-int user_confirm_tx(/*uint64_t amount, const public_key_t* dst_address_s, const public_key_t* dst_address_s_v, uint8_t dst_address_tag, uint64_t fee*/);
+int user_confirm_tx(void);
 
 #endif // BYTECOIN_UI_H

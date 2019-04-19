@@ -41,6 +41,7 @@ int bytecoin_apdu_get_wallet_keys(void)
     public_key_t view_public_key;
     elliptic_curve_point_t v_mul_A_plus_sH;
 
+
     get_wallet_keys(&G_bytecoin_vstate.wallet_keys, &wallet_key, &A_plus_sH, &view_public_key, &v_mul_A_plus_sH);
 
     insert_hash      (wallet_key);
@@ -59,15 +60,21 @@ int bytecoin_apdu_get_wallet_keys(void)
 
 int bytecoin_apdu_scan_outputs(void)
 {
-    const public_key_t output_public_key = fetch_public_key();
+    const uint8_t len = fetch_var(uint8_t);
+    if (len > BYTECOIN_MAX_SCAN_OUTPUTS)
+        THROW(SW_NOT_ENOUGH_MEMORY);
+
+    public_key_t output_public_keys[BYTECOIN_MAX_SCAN_OUTPUTS];
+    for (uint8_t i = 0; i < len; ++i)
+        output_public_keys[i] = fetch_public_key();
     reset_io_buffer(&G_bytecoin_vstate.io_buffer);
 
-    public_key_t result;
-    scan_outputs(&G_bytecoin_vstate.wallet_keys, &output_public_key, &result);
-
-    insert_public_key(result);
-    PRINT_PRIMITIVE(output_public_key);
-    PRINT_PRIMITIVE(result);
+    for (uint8_t i = 0; i < len; ++i)
+    {
+        public_key_t result;
+        scan_outputs(&G_bytecoin_vstate.wallet_keys, &output_public_keys[i], &result);
+        insert_public_key(result);
+    }
     return SW_NO_ERROR;
 }
 
@@ -159,35 +166,6 @@ int bytecoin_apdu_sig_add_input_finish(void)
 
     return SW_NO_ERROR;
 }
-
-//int bytecoin_apdu_sig_add_input(void)
-//{
-//    const uint64_t amount             = fetch_var(uint64_t);
-//    const uint32_t output_indexes_len = fetch_var(uint32_t);
-
-//    if (output_indexes_len > BYTECOIN_MAX_OUTPUT_INDEXES)
-//        THROW(SW_NOT_ENOUGH_MEMORY);
-//    uint32_t output_indexes[BYTECOIN_MAX_OUTPUT_INDEXES];
-//    for (uint32_t i = 0; i < output_indexes_len; ++i)
-//        output_indexes[i] = fetch_var_from_io_buffer(&G_bytecoin_vstate.io_buffer, sizeof(output_indexes[0]));
-
-//    const secret_key_t inv_output_secret_hash = fetch_secret_key();
-//    const uint32_t address_index              = fetch_var(uint32_t);
-
-//    PRINTF("amount = %d, output_indexes_len = %d\n", (int)amount, output_indexes_len);
-//    reset_io_buffer(&G_bytecoin_vstate.io_buffer);
-
-//    sig_add_input(
-//                &G_bytecoin_vstate.sig_state,
-//                &G_bytecoin_vstate.wallet_keys,
-//                amount,
-//                output_indexes,
-//                output_indexes_len,
-//                &inv_output_secret_hash,
-//                address_index);
-
-//    return SW_NO_ERROR;
-//}
 
 int bytecoin_apdu_sig_add_output(void)
 {

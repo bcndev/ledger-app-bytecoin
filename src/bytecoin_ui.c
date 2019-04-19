@@ -25,6 +25,29 @@ void init_ui_data(ui_data_t* ui_data)
     ui_data->string_is_valid = false;
 }
 
+
+#if CX_APILEVEL == 8
+#define PIN_VERIFIED (!0)
+#elif CX_APILEVEL == 9 ||  CX_APILEVEL == 10
+
+#define PIN_VERIFIED BOLOS_UX_OK
+#else
+#error CX_APILEVEL not  supported
+#endif
+
+static
+void ask_pin_if_needed(void)
+{
+    if (os_global_pin_is_validated() != PIN_VERIFIED)
+    {
+        bolos_ux_params_t params;
+        os_memset(&params, 0, sizeof(params));
+        params.ux_id = BOLOS_UX_VALIDATE_PIN;
+        params.len = 0;
+        os_ux_blocking(&params);
+    }
+}
+
 const bagl_element_t *io_seproxyhal_touch_exit(const bagl_element_t *e)
 {
     // Go back to the dashboard
@@ -64,17 +87,21 @@ const bagl_element_t* ui_menu_main_preprocessor(const ux_menu_entry_t* entry, ba
         case MENU_CURRENT_ENTRY_LINE2_ID:
             if (!G_bytecoin_vstate.ui_data.string_is_valid)
             {
+                char* addr_str = G_bytecoin_vstate.ui_data.address_str;
+                size_t size = sizeof(G_bytecoin_vstate.ui_data.address_str);
+
                 public_key_t address_S;
                 public_key_t address_Sv;
                 prepare_address_public(&G_bytecoin_vstate.wallet_keys, 0, &address_S, &address_Sv);
-                encode_address(BYTECOIN_ADDRESS_BASE58_PREFIX_AMETHYST, &address_S, &address_Sv, G_bytecoin_vstate.ui_data.address_str, sizeof(G_bytecoin_vstate.ui_data.address_str) - 1);
+                size = encode_address(BYTECOIN_ADDRESS_BASE58_PREFIX_AMETHYST, &address_S, &address_Sv, addr_str, size);
+                short_address(addr_str, size);
                 G_bytecoin_vstate.ui_data.string_is_valid = true;
             }
-            element->component.stroke = 10;  // 1 sec stop in each way
-            element->component.icon_id = 35; // roundtrip speed in pixel/s
-            element->component.width = 95;
+//            element->component.stroke = 10;  // 1 sec stop in each way
+//            element->component.icon_id = 35; // roundtrip speed in pixel/s
+            element->component.width = 105;
             element->text = G_bytecoin_vstate.ui_data.address_str;
-            UX_CALLBACK_SET_INTERVAL(bagl_label_roundtrip_duration_ms(element, 8));
+//            UX_CALLBACK_SET_INTERVAL(bagl_label_roundtrip_duration_ms(element, 8));
             break;
         }
     }
@@ -215,6 +242,7 @@ unsigned int ui_export_viewkey_button(unsigned int button_mask, unsigned int but
 
 int user_confirm_export_view_only(void)
 {
+    ask_pin_if_needed();
     UX_DISPLAY(ui_export_viewkey, ui_export_viewkey_preprocessor);
     return 0;
 }
@@ -291,60 +319,124 @@ unsigned int ui_view_outgoing_addresses_button(unsigned int button_mask, unsigne
 
 int user_confirm_view_outgoing_addresses(void)
 {
+    ask_pin_if_needed();
     UX_DISPLAY(ui_view_outgoing_addresses, ui_view_outgoing_addresses_preprocessor);
     return 0;
 }
 
 #define NUMBER_OF_DECIMAL_PLACES 8
 
+//static
+//size_t amount2str_old(uint64_t amount, char* amount_str, size_t str_len)
+//{
+//    os_memset(amount_str, 0, str_len);
+
+//    if (amount == 0)
+//    {
+//        amount_str[0] = '0';
+//        return 1;
+//    }
+
+//    size_t amount_len = 0;
+//    for (uint64_t amount_rem = amount; amount_rem != 0; amount_rem /= 10)
+//        ++amount_len;
+
+//    for (size_t offset = 0; amount != 0; amount /= 10)
+//        amount_str[amount_len - (offset++) - 1] = (char)(amount % 10) + '0';
+
+//    if (amount_len < NUMBER_OF_DECIMAL_PLACES)
+//    {
+//        os_memmove(amount_str + NUMBER_OF_DECIMAL_PLACES - amount_len + 2, amount_str, amount_len);
+//        os_memset(amount_str, '0', NUMBER_OF_DECIMAL_PLACES - amount_len + 2);
+//        amount_str[1] = '.';
+//        amount_len += NUMBER_OF_DECIMAL_PLACES - amount_len + 2;
+//    }
+//    else if (amount_len == NUMBER_OF_DECIMAL_PLACES)
+//    {
+//        os_memmove(amount_str + 2, amount_str, amount_len);
+//        amount_str[0] = '0';
+//        amount_str[1] = '.';
+//        amount_len += 2;
+//    }
+//    else
+//    {
+//        os_memmove(amount_str + amount_len - NUMBER_OF_DECIMAL_PLACES + 1, amount_str + amount_len - NUMBER_OF_DECIMAL_PLACES, NUMBER_OF_DECIMAL_PLACES);
+//        amount_str[amount_len - NUMBER_OF_DECIMAL_PLACES] = '.';
+//        amount_len += 1;
+//    }
+
+//    for (size_t offset = amount_len - 1; amount_str[offset] == '0' && amount_str[offset - 1] != '.'; --offset)
+//    {
+//        amount_str[offset] = 0;
+//        --amount_len;
+//    }
+
+//    return amount_len;
+//}
+
 static
-size_t amount2str(uint64_t amount, char* amount_str, size_t str_len)
+void ffw(uint64_t amount, size_t digs, char* buf)
 {
-    os_memset(amount_str, 0, str_len);
-
-    if (amount == 0)
+    for(; digs > 0; digs -=1)
     {
-        amount_str[0] = '0';
-        return 1;
+        const uint64_t d = amount % 10;
+        amount /= 10;
+        buf[digs - 1] = '0' + d;
     }
-
-    size_t amount_len = 0;
-    for (uint64_t amount_rem = amount; amount_rem != 0; amount_rem /= 10)
-        ++amount_len;
-
-    for (size_t offset = 0; amount != 0; amount /= 10)
-        amount_str[amount_len - (offset++) - 1] = (char)(amount % 10) + '0';
-
-    if (amount_len < NUMBER_OF_DECIMAL_PLACES)
-    {
-        os_memmove(amount_str + NUMBER_OF_DECIMAL_PLACES - amount_len + 2, amount_str, amount_len);
-        os_memset(amount_str, '0', NUMBER_OF_DECIMAL_PLACES - amount_len + 2);
-        amount_str[1] = '.';
-        amount_len += NUMBER_OF_DECIMAL_PLACES - amount_len + 2;
-    }
-    else if (amount_len == NUMBER_OF_DECIMAL_PLACES)
-    {
-        os_memmove(amount_str + 2, amount_str, amount_len);
-        amount_str[0] = '0';
-        amount_str[1] = '.';
-        amount_len += 2;
-    }
-    else
-    {
-        os_memmove(amount_str + amount_len - NUMBER_OF_DECIMAL_PLACES + 1, amount_str + amount_len - NUMBER_OF_DECIMAL_PLACES, NUMBER_OF_DECIMAL_PLACES);
-        amount_str[amount_len - NUMBER_OF_DECIMAL_PLACES] = '.';
-        amount_len += 1;
-    }
-
-    for (size_t offset = amount_len - 1; amount_str[offset] == '0' && amount_str[offset - 1] != '.'; --offset)
-    {
-        amount_str[offset] = 0;
-        --amount_len;
-    }
-
-    return amount_len;
 }
 
+static
+size_t amount2str(uint64_t amount, char* buffer, size_t len)
+{
+    const size_t COIN = 100000000;
+    const size_t CENT = COIN / 100;
+    uint64_t ia = amount / COIN;
+    uint64_t fa = amount - ia * COIN;
+    size_t pos = 0;
+
+    while (ia >= 1000)
+    {
+        pos += 4;
+        os_memmove(buffer + 4, buffer, pos);
+        buffer[0] = '\'';
+        ffw(ia % 1000, 3, buffer + 1);
+        ia /= 1000;
+    }
+
+    while(true)
+    {
+        uint64_t d = ia % 10;
+        ia = ia / 10;
+        pos += 1;
+        memmove(buffer + 1, buffer, pos);
+        buffer[0] = '0' + d;
+        if(ia == 0)
+          break;
+    }
+
+    if (fa != 0)
+    {  // cents
+        buffer[pos++] = '.';
+        ffw(fa / CENT, 2, buffer + pos);
+        pos += 2;
+        fa %= CENT;
+    }
+
+    if (fa != 0)
+    {
+    //    buffer[pos++] = '\'';
+        ffw(fa / 1000, 3, buffer + pos);
+        pos += 3;
+        fa %= 1000;
+    }
+    if (fa != 0)
+    {
+    //    buffer[pos++] = '\'';
+        ffw(fa, 3, buffer + pos);
+        pos += 3;
+    }
+    return pos;
+}
 
 #define BYTECOIN_SIMPLE_ADDRESS_TAG     0
 #define BYTECOIN_UNLINKABLE_ADDRESS_TAG 1
@@ -461,15 +553,12 @@ void ui_confirm_tx_accept_action(unsigned int value)
     ui_menu_main_display(0);
 }
 
-int user_confirm_tx(/*uint64_t amount, const public_key_t* dst_address_s, const public_key_t* dst_address_s_v, uint8_t dst_address_tag, uint64_t fee*/)
-{
-//    G_bytecoin_vstate.io_buffer.confirm_tx_params.address_s = *dst_address_s;
-//    G_bytecoin_vstate.io_buffer.confirm_tx_params.address_sv = *dst_address_s_v;
-//    G_bytecoin_vstate.io_buffer.confirm_tx_params.amount = amount;
-//    G_bytecoin_vstate.io_buffer.confirm_tx_params.fee = fee;
-//    G_bytecoin_vstate.io_buffer.confirm_tx_params.address_tag = dst_address_tag;
 
+int user_confirm_tx(void)
+{
     G_bytecoin_vstate.ui_data.string_is_valid = false;
+
+    ask_pin_if_needed();
     UX_MENU_DISPLAY(0, ui_menu_confirm_tx, ui_menu_confirm_tx_preprocessor);
 
     return 0;

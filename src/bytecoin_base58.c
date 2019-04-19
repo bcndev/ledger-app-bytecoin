@@ -30,7 +30,7 @@ void encode_block_base58(const uint8_t* block, size_t size, char* result)
     }
 }
 
-void encode_base58(const uint8_t* data, size_t data_len, char* result, size_t result_len)
+size_t encode_base58(const uint8_t* data, size_t data_len, char* result, size_t result_len)
 {
     const size_t full_block_count = data_len / FULL_BLOCK_SIZE;
     const size_t last_block_size  = data_len % FULL_BLOCK_SIZE;
@@ -41,4 +41,5 @@ void encode_base58(const uint8_t* data, size_t data_len, char* result, size_t re
         encode_block_base58(data + i * FULL_BLOCK_SIZE, FULL_BLOCK_SIZE, result + i * FULL_ENCODED_BLOCK_SIZE);
     if (last_block_size > 0)
         encode_block_base58(data + full_block_count * FULL_BLOCK_SIZE, last_block_size, result + full_block_count * FULL_ENCODED_BLOCK_SIZE);
+    return needed_result_len;
 }

@@ -76,7 +76,7 @@ int dispatch(uint8_t cla, uint8_t ins)
 }
 
 static
-void sample_main(void)
+void bytecoin_main(void)
 {
     volatile uint32_t io_flags = 0;
 
@@ -163,7 +163,7 @@ int main(void)
             init_vstate(&G_bytecoin_vstate);
             ui_init();
 
-            sample_main();
+            bytecoin_main();
         }
         CATCH(EXCEPTION_IO_RESET) {
         // reset IO and UX

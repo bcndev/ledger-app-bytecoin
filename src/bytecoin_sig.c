@@ -335,7 +335,7 @@ int sig_add_output(
 
     sig_state->status = SIG_STATE_EXPECT_USER_CONFIRMATION;
     sig_state->dst_fee = fee;
-    return user_confirm_tx(/*sig_state->dst_amount, dst_address_s, dst_address_s_v, dst_address_tag, fee*/);
+    return user_confirm_tx();
 
 //    sig_add_output_final(sig_state); // DEBUG: bypass the confirmation
 //    return SW_NO_ERROR;

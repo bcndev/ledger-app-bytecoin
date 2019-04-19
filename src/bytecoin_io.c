@@ -16,6 +16,7 @@ void init_io_call_params(io_call_params_t* ioparams)
 void init_io_buffer(io_buffer_t* iobuf)
 {
     os_memset(iobuf, 0 , sizeof(io_buffer_t));
+    iobuf->data = G_io_apdu_buffer;
 }
 
 static
@@ -30,7 +31,7 @@ void check_available(const io_buffer_t* iobuf, uint16_t len)
 static
 void make_hole(io_buffer_t* iobuf, uint16_t len)
 {
-    if (iobuf->length + len > sizeof(iobuf->data))
+    if (iobuf->length + len > BYTECOIN_IO_BUFFER_SIZE)
         THROW(SW_NOT_ENOUGH_MEMORY);
     if (iobuf->length < iobuf->offset)
         THROW(SW_CONDITIONS_NOT_SATISFIED);
@@ -138,7 +139,7 @@ void reset_io_buffer(io_buffer_t* iobuf)
 void clear_io_buffer(io_buffer_t* iobuf)
 {
     reset_io_buffer(iobuf);
-    os_memset(iobuf->data, 0, sizeof(iobuf->data));
+    os_memset(iobuf->data, 0, BYTECOIN_IO_BUFFER_SIZE);
 }
 
 #define MAX_OUT 0xFE
@@ -168,7 +169,7 @@ int io_do(io_call_params_t* previous_iocall_params, io_buffer_t* iobuf, uint32_t
         while(iobuf->length > MAX_OUT)
         {
             const uint32_t tx =  MAX_OUT - 2;
-            os_memmove(G_io_apdu_buffer, iobuf->data + iobuf->offset, tx);
+//            os_memmove(G_io_apdu_buffer, iobuf->data + iobuf->offset, tx);
             iobuf->length -= tx;
             iobuf->offset += tx;
             G_io_apdu_buffer[tx] = (SW_BYTES_REMAINING_00 >> 8);
@@ -185,7 +186,7 @@ int io_do(io_call_params_t* previous_iocall_params, io_buffer_t* iobuf, uint32_t
                 return 0;
             }
         }
-        os_memmove(G_io_apdu_buffer, iobuf->data + iobuf->offset, iobuf->length);
+//        os_memmove(G_io_apdu_buffer, iobuf->data + iobuf->offset, iobuf->length);
 
         if (io_flags & IO_RETURN_AFTER_TX)
         {
@@ -204,12 +205,14 @@ int io_do(io_call_params_t* previous_iocall_params, io_buffer_t* iobuf, uint32_t
     // save params
     *previous_iocall_params = new_iocall->params;
     // save cdata
-    if (new_iocall->params.lc > sizeof(iobuf->data))
+#if BYTECOIN_IO_BUFFER_SIZE < UINT8_MAX // disable warning if BYTECOIN_IO_BUFFER_SIZE > 255
+    if (new_iocall->params.lc > BYTECOIN_IO_BUFFER_SIZE)
     {
         PRINTF("SW_NOT_ENOUGH_MEMORY lc=%d\n", (int)new_iocall->params.lc);
         THROW(SW_NOT_ENOUGH_MEMORY + new_iocall->params.lc);
         return SW_NOT_ENOUGH_MEMORY;
     }
+#endif
     os_memmove(iobuf->data + iobuf->offset, new_iocall->cdata, new_iocall->params.lc);
     iobuf->length =  previous_iocall_params->lc;
 
@@ -230,7 +233,7 @@ in_chaining:
             }
             previous_iocall_params->cla = new_iocall->params.cla;
             previous_iocall_params->lc  = new_iocall->params.lc;
-            if ((iobuf->length + previous_iocall_params->lc) > sizeof(iobuf->data))
+            if ((iobuf->length + previous_iocall_params->lc) > BYTECOIN_IO_BUFFER_SIZE)
             {
                 THROW(SW_NOT_ENOUGH_MEMORY);
                 return SW_NOT_ENOUGH_MEMORY;

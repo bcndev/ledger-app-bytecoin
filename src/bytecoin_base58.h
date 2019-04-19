@@ -4,6 +4,6 @@
 #include <stdint.h>
 #include <stddef.h>
 
-void encode_base58(const uint8_t* data, size_t data_len, char* result, size_t result_len);
+size_t encode_base58(const uint8_t* data, size_t data_len, char* result, size_t result_len);
 
 #endif // BYTECOIN_BASE58_H

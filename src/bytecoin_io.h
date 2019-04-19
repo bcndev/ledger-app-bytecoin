@@ -25,11 +25,8 @@ typedef struct io_call_s
 
 void init_io_call_params(io_call_params_t* ioparams);
 
-//#define BYTECOIN_IO_BUFFER_SIZE 288
-//#define BYTECOIN_IO_BUFFER_SIZE 234
-
-#define BYTECOIN_IO_BUFFER_SIZE 163
-#if BYTECOIN_IO_BUFFER_SIZE < 163 // 5*32+1 bytes in export_view_only +2 bytes for sw
+#define BYTECOIN_IO_BUFFER_SIZE  IO_APDU_BUFFER_SIZE
+#if BYTECOIN_IO_BUFFER_SIZE < 162 // 5*32 bytes in export_view_only +2 bytes for sw
 #error BYTECOIN_IO_BUFFER_SIZE is too small
 #endif
 
@@ -44,7 +41,8 @@ typedef struct confirm_tx_params_s
 
 typedef struct io_buffer_s
 {
-    uint8_t data[BYTECOIN_IO_BUFFER_SIZE];
+//    uint8_t data[BYTECOIN_IO_BUFFER_SIZE];
+    uint8_t* data;
     uint16_t length;
     uint16_t offset;
 } io_buffer_t;

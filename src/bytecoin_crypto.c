@@ -25,11 +25,6 @@ static const uint8_t C_ED25519_H[] = {
     0xea, 0xd0, 0xad, 0xf1, 0x9f, 0xdc, 0xea, 0x2a, 0xaf, 0x99, 0x37, 0x15, 0x70, 0x59, 0x65, 0x8b
 };
 
-//static const uint8_t C_ED25519_Hy[] = {
-//    0x8b, 0x65, 0x59, 0x70, 0x15, 0x37, 0x99, 0xaf, 0x2a, 0xea, 0xdc, 0x9f, 0xf1, 0xad, 0xd0, 0xea,
-//    0x6c, 0x72, 0x51, 0xd5, 0x41, 0x54, 0xcf, 0xa9, 0x2c, 0x17, 0x3a, 0x0d, 0xd3, 0x9c, 0x1f, 0x94
-//};
-
 static const uint8_t C_ED25519_ORDER[] = {
     //l: 0x1000000000000000000000000000000014def9dea2f79cd65812631a5cf5d3ed
     0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -125,12 +120,6 @@ void keccak_final_to_good_point(keccak_hasher_t* hasher, elliptic_curve_point_t*
 
 void fast_hash(const void* buf, size_t len, hash_t* result)
 {
-//    cx_sha3_t hasher;
-//    ((cx_hash_t*)&hasher)->algo = CX_KECCAK;
-//    cx_keccak_init((cx_sha3_t*)&hasher, 256);
-//    cx_hash((cx_hash_t*)&hasher, CX_LAST | CX_NO_REINIT, buf, len, out.data, sizeof(out.data));
-//    return out;
-
     keccak_hasher_t hasher;
     keccak_init(&hasher);
     keccak_update(&hasher, buf, len);
@@ -151,32 +140,6 @@ void hash_to_scalar64(const void *buf, size_t len, elliptic_curve_scalar_t *resu
     reduce64(&left_hash, result);
 }
 
-//void keccak_init64()
-//{
-//    cx_keccak_init(&keccak_hasher64, 512);
-//}
-
-//void keccak_update64(const void* buf, unsigned int len)
-//{
-//    cx_hash((cx_hash_t*)&keccak_hasher64, 0, buf, len, NULL, 0);
-//}
-
-//hash64_t keccak_final64()
-//{
-//    hash64_t result;
-//    cx_hash((cx_hash_t*)&keccak_hasher64, CX_LAST, NULL, 0, result.data, sizeof(result.data));
-//    return result;
-//}
-
-
-//void fast_hash64(uint8_t* W, const void* buf, unsigned int len)
-//{
-//    cx_hash_t* hasher = (cx_hash_t*)&keccak_hasher64;
-//    hasher->algo = CX_KECCAK;
-//    cx_keccak_init((cx_sha3_t*)hasher, 512);
-//    cx_hash(hasher, CX_LAST | CX_NO_REINIT, buf, len, W, 64);
-//}
-
 size_t encode_varint(uint64_t value, uint8_t* buf)
 {
     size_t len = 0;
@@ -188,18 +151,6 @@ size_t encode_varint(uint64_t value, uint8_t* buf)
     buf[len++] = value;
     return len;
 }
-
-//uint32_t encode_varint64(uint64_t value, uint8_t* buf)
-//{
-//    uint32_t len = 0;
-//    while(value >= 0x80)
-//    {
-//        buf[len++] = (value & 0x7F) | 0x80;
-//        value >>= 7;
-//    }
-//    buf[len++] = value;
-//    return len;
-//}
 
 void reduce32(const hash_t* h, elliptic_curve_scalar_t* result)
 {
@@ -229,33 +180,6 @@ void invert32(const elliptic_curve_scalar_t *a, elliptic_curve_scalar_t* result)
     os_memmove(result->data, a->data, sizeof(a->data));
     cx_math_invprimem(result->data, a->data, C_ED25519_ORDER, sizeof(C_ED25519_ORDER));
 }
-
-//void reverse64(uint8_t rscal[64], const uint8_t scal[64])
-//{
-//    uint8_t x;
-//    unsigned int i;
-//    for (i = 0; i < 32; ++i)
-//    {
-//        x = scal[i];
-//        rscal[i] = scal[63 - i];
-//        rscal[63 - i] = x;
-//    }
-//}
-
-//void reduce64(uint8_t W[64], const uint8_t h[64])
-//{
-//    uint8_t ra[64];
-//    reverse64(ra, h);
-//    cx_math_modm(ra, sizeof(ra), C_ED25519_ORDER, sizeof(C_ED25519_ORDER));
-//    reverse64(W, ra);
-//}
-
-//void hash_to_scalar64(uint8_t W[64], const void* buf, size_t len)
-//{
-//    fast_hash64(W, buf, len);
-//    reduce64(W, W);
-//}
-
 
 void ecmulm(const elliptic_curve_scalar_t* a, const elliptic_curve_scalar_t* b, elliptic_curve_scalar_t* result)
 {
@@ -338,29 +262,6 @@ void ecsubm(const elliptic_curve_scalar_t* a, const elliptic_curve_scalar_t* b, 
 {
     cx_math_subm(result->data, a->data, b->data, C_ED25519_ORDER, sizeof(result->data));
 }
-
-//elliptic_curve_scalar_t ecpowm(const elliptic_curve_scalar_t* a, const elliptic_curve_scalar_t* e)
-//{
-//    elliptic_curve_scalar_t result;
-//    cx_math_powm(result.data, a->data, e->data, sizeof(e->data), C_ED25519_FIELD, sizeof(C_ED25519_FIELD));
-//    return result;
-//}
-
-//void compress_point_to_mem(const decompressed_point_t* point, elliptic_curve_point_t* result)
-//{
-//    uint8_t temp[sizeof(point->data)];
-//    os_memmove(temp, point->data, sizeof(point->data));
-//    cx_edward_compress_point(CX_CURVE_Ed25519, temp, sizeof(temp));
-
-//    os_memmove(result->data, &temp[1], sizeof(result->data));
-//}
-
-//void decompress_point_to_mem(const elliptic_curve_point_t* point, decompressed_point_t* result)
-//{
-//    result->data[0] = 0x02;
-//    os_memmove(&result->data[1], point->data, sizeof(point->data));
-//    cx_edward_decompress_point(CX_CURVE_Ed25519, result->data, sizeof(result->data));
-//}
 
 static
 void hash_to_bad_point(const void* buf, uint32_t len, elliptic_curve_point_t* result)

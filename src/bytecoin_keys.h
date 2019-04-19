@@ -52,11 +52,13 @@ void unlinkable_derive_output_public_key(
 
 void generate_proof_H(const secret_key_t* s, signature_t* result);
 
-void encode_address(
+size_t encode_address(
         uint64_t prefix,
         const public_key_t* spend,
         const public_key_t* view,
         char* result,
         size_t result_len);
+
+void short_address(char* addr_str, size_t size);
 
 #endif // KEYS_H

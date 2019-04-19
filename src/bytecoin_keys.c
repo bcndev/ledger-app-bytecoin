@@ -139,7 +139,7 @@ void unlinkable_derive_output_public_key(
 
 #define ADDR_CHECKSUM_SIZE       4
 
-void encode_address(
+size_t encode_address(
         uint64_t prefix,
         const public_key_t* spend,
         const public_key_t* view,
@@ -161,7 +161,17 @@ void encode_address(
         os_memmove(data + size, hash.data, ADDR_CHECKSUM_SIZE);
         size += ADDR_CHECKSUM_SIZE;
     }
-    encode_base58(data, size, result, result_len);
+    return encode_base58(data, size, result, result_len);
+}
+
+#define BYTECOIN_SHORTENED_ADDRESS_PART 7
+#define BYTECOIN_SHORTENED_ADDRESS_DOTS 3
+
+void short_address(char* addr_str, size_t size)
+{
+    os_memset(addr_str + BYTECOIN_SHORTENED_ADDRESS_PART, '.', BYTECOIN_SHORTENED_ADDRESS_DOTS);
+    os_memmove(addr_str + BYTECOIN_SHORTENED_ADDRESS_PART + BYTECOIN_SHORTENED_ADDRESS_DOTS, addr_str + size - BYTECOIN_SHORTENED_ADDRESS_PART, BYTECOIN_SHORTENED_ADDRESS_PART);
+    os_memset(addr_str + 2*BYTECOIN_SHORTENED_ADDRESS_PART + BYTECOIN_SHORTENED_ADDRESS_DOTS, 0, size - (2*BYTECOIN_SHORTENED_ADDRESS_PART - BYTECOIN_SHORTENED_ADDRESS_DOTS));
 }
 
 static
