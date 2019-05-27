@@ -1,7 +1,25 @@
+/*******************************************************************************
+*   Bytecoin Wallet for Ledger Nano S
+*   (c) 2018 - 2019 The Bytecoin developers
+*
+*  Licensed under the Apache License, Version 2.0 (the "License");
+*  you may not use this file except in compliance with the License.
+*  You may obtain a copy of the License at
+*
+*      http://www.apache.org/licenses/LICENSE-2.0
+*
+*  Unless required by applicable law or agreed to in writing, software
+*  distributed under the License is distributed on an "AS IS" BASIS,
+*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+*  See the License for the specific language governing permissions and
+*  limitations under the License.
+********************************************************************************/
+
 #ifndef BYTECOIN_IO_H
 #define BYTECOIN_IO_H
 
 #include <stdint.h>
+#include "os.h"
 #include "bytecoin_crypto.h"
 
 #pragma pack(push)
@@ -41,7 +59,6 @@ typedef struct confirm_tx_params_s
 
 typedef struct io_buffer_s
 {
-//    uint8_t data[BYTECOIN_IO_BUFFER_SIZE];
     uint8_t* data;
     uint16_t length;
     uint16_t offset;
@@ -58,36 +75,16 @@ void clear_io_buffer(io_buffer_t* iobuf);
 int io_do(io_call_params_t* previous_iocall_params, io_buffer_t* iobuf, uint32_t io_flags);
 
 uint64_t fetch_var_from_io_buffer(io_buffer_t* iobuf, uint16_t len);
-//void fetch_reversed_bytes_from_io_buffer(io_buffer_t* iobuf, void* buf, uint16_t len);
 void fetch_bytes_from_io_buffer(io_buffer_t* iobuf, void* buf, uint16_t len);
 elliptic_curve_point_t fetch_point_from_io_buffer(io_buffer_t* iobuf);
 elliptic_curve_scalar_t fetch_scalar_from_io_buffer(io_buffer_t* iobuf);
 hash_t fetch_hash_from_io_buffer(io_buffer_t* iobuf);
 
-//void insert_reversed_bytes_to_io_buffer(io_buffer_t* iobuf, const void* buf, uint16_t len);
 void insert_bytes_to_io_buffer(io_buffer_t* iobuf, const void* buf, uint16_t len);
 void insert_var_to_io_buffer(io_buffer_t* iobuf, uint64_t var, uint16_t len);
 void insert_scalar_to_io_buffer(io_buffer_t* iobuf, const elliptic_curve_scalar_t* s);
 void insert_point_to_io_buffer(io_buffer_t* iobuf, const elliptic_curve_point_t* P);
 void insert_hash_to_io_buffer(io_buffer_t* iobuf, const hash_t* h);
-
-//inline
-//void insert_scalar_to_io_buffer(io_buffer_t* iobuf, const elliptic_curve_scalar_t* s)
-//{
-//    insert_reversed_bytes_to_io_buffer(iobuf, s->data, sizeof(s->data));
-//}
-
-//inline
-//void insert_point_to_io_buffer(io_buffer_t* iobuf, const elliptic_curve_point_t* P)
-//{
-//    insert_bytes_to_io_buffer(iobuf, P->data, sizeof(P->data));
-//}
-
-//inline
-//void insert_hash_to_io_buffer(io_buffer_t* iobuf, const hash_t* h)
-//{
-//    insert_bytes_to_io_buffer(iobuf, h->data, sizeof(h->data));
-//}
 
 #define insert_point(primitive) \
     insert_point_to_io_buffer(&G_bytecoin_vstate.io_buffer, &primitive)

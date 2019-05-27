@@ -1,10 +1,25 @@
-#include "bytecoin_crypto.h"
-#include "cx.h"
-#include "bytecoin_fe.h"
-#include "bytecoin_keccak.h"
+/*******************************************************************************
+*   Bytecoin Wallet for Ledger Nano S
+*   (c) 2018 - 2019 The Bytecoin developers
+*
+*  Licensed under the Apache License, Version 2.0 (the "License");
+*  you may not use this file except in compliance with the License.
+*  You may obtain a copy of the License at
+*
+*      http://www.apache.org/licenses/LICENSE-2.0
+*
+*  Unless required by applicable law or agreed to in writing, software
+*  distributed under the License is distributed on an "AS IS" BASIS,
+*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+*  See the License for the specific language governing permissions and
+*  limitations under the License.
+********************************************************************************/
 
-#include "bytecoin_vars.h" // for dbg only
-#include "bytecoin_ledger_api.h" // for print_primitive
+#include "os.h"
+#include "cx.h"
+#include "bytecoin_crypto.h"
+#include "bytecoin_fe.h"
+#include "bytecoin_debug.h"
 
 static const uint8_t C_ED25519_G[] = {
     //uncompressed
@@ -299,9 +314,4 @@ void ecmul_8(const elliptic_curve_point_t* P, elliptic_curve_point_t* result)
     cx_ecfp_add_point(CX_CURVE_Ed25519, d_result.data, d_result.data, d_result.data, sizeof(d_result.data));
     cx_ecfp_add_point(CX_CURVE_Ed25519, d_result.data, d_result.data, d_result.data, sizeof(d_result.data));
     compress_point(&d_result, result);
-}
-
-void generate_random_bytes(uint8_t* buf, size_t len)
-{
-    cx_rng(buf, len);
 }

@@ -1,8 +1,27 @@
+/*******************************************************************************
+*   Bytecoin Wallet for Ledger Nano S
+*   (c) 2018 - 2019 The Bytecoin developers
+*
+*  Licensed under the Apache License, Version 2.0 (the "License");
+*  you may not use this file except in compliance with the License.
+*  You may obtain a copy of the License at
+*
+*      http://www.apache.org/licenses/LICENSE-2.0
+*
+*  Unless required by applicable law or agreed to in writing, software
+*  distributed under the License is distributed on an "AS IS" BASIS,
+*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+*  See the License for the specific language governing permissions and
+*  limitations under the License.
+********************************************************************************/
+
 #include "os.h"
 #include "bytecoin_sig.h"
 #include "bytecoin_ledger_api.h"
 #include "bytecoin_wallet.h"
+#include "bytecoin_keys.h"
 #include "bytecoin_ui.h"
+#include "bytecoin_debug.h"
 
 #define BYTECOIN_INPUT_KEY_TAG  2
 #define BYTECOIN_OUTPUT_KEY_TAG 2
@@ -40,8 +59,7 @@ void sig_start(
         uint64_t ut,
         uint32_t inputs_num,
         uint32_t outputs_num,
-        uint32_t extra_num
-        /*, uint32_t change_address_index*/)
+        uint32_t extra_num)
 {
     if (inputs_num == 0 || outputs_num == 0 || version == 0)
     {
@@ -77,7 +95,6 @@ void sig_add_input_start(
     const bool call_is_expected = (sig_state->status == SIG_STATE_EXPECT_INPUT_START && sig_state->inputs_counter < sig_state->inputs_num);
     if (!call_is_expected)
     {
-        PRINTF("sig_add_input_start abort\n");
         THROW(SW_COMMAND_NOT_ALLOWED);
         return;
     }
@@ -110,7 +127,6 @@ void sig_add_input_indexes(
     const bool call_is_expected = (sig_state->status == SIG_STATE_EXPECT_INPUT_INDEXES && sig_state->mixin_counter + output_indexes_length <= sig_state->mixin_num);
     if (!call_is_expected)
     {
-        PRINTF("sig_add_input_indexes abort\n");
         THROW(SW_COMMAND_NOT_ALLOWED);
         return;
     }
@@ -121,7 +137,6 @@ void sig_add_input_indexes(
         keccak_update_varint(&sig_state->tx_inputs_hasher, output_indexes[j]);
     }
     sig_state->mixin_counter += output_indexes_length;
-    PRINTF("mixin_counter = %d, mixin_num = %d, output_indexes_length = %d\n", sig_state->mixin_counter, sig_state->mixin_num, output_indexes_length);
     if (sig_state->mixin_counter < sig_state->mixin_num)
         return;
     sig_state->status = SIG_STATE_EXPECT_INPUT_FINISH;
@@ -137,7 +152,6 @@ void sig_add_input_finish(
     const bool call_is_expected = (sig_state->status == SIG_STATE_EXPECT_INPUT_FINISH);
     if (!call_is_expected)
     {
-        PRINTF("sig_add_input_finish abort\n");
         THROW(SW_COMMAND_NOT_ALLOWED);
         return;
     }

@@ -1,11 +1,25 @@
+/*******************************************************************************
+*   Bytecoin Wallet for Ledger Nano S
+*   (c) 2018 - 2019 The Bytecoin developers
+*
+*  Licensed under the Apache License, Version 2.0 (the "License");
+*  you may not use this file except in compliance with the License.
+*  You may obtain a copy of the License at
+*
+*      http://www.apache.org/licenses/LICENSE-2.0
+*
+*  Unless required by applicable law or agreed to in writing, software
+*  distributed under the License is distributed on an "AS IS" BASIS,
+*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+*  See the License for the specific language governing permissions and
+*  limitations under the License.
+********************************************************************************/
+
 #include "bytecoin_apdu.h"
 #include "bytecoin_ledger_api.h"
 #include "bytecoin_io.h"
 #include "bytecoin_vars.h"
-#include "bytecoin_wallet.h"
-#include "bytecoin_sig.h"
-
-#include "bytecoin_ui.h"
+#include "bytecoin_debug.h"
 
 int bytecoin_apdu_get_ledger_app_info(void)
 {
@@ -49,12 +63,6 @@ int bytecoin_apdu_get_wallet_keys(void)
     insert_point     (v_mul_A_plus_sH);
     insert_public_key(view_public_key);
 
-    PRINT_PRIMITIVE(wallet_key);
-    PRINT_PRIMITIVE(view_public_key);
-    PRINT_PRIMITIVE(G_bytecoin_vstate.wallet_keys.sH);
-    PRINT_PRIMITIVE(G_bytecoin_vstate.wallet_keys.view_secret_key);
-    PRINT_PRIMITIVE(G_bytecoin_vstate.wallet_keys.audit_key_base_secret_key);
-
     return SW_NO_ERROR;
 }
 
@@ -93,7 +101,6 @@ int bytecoin_apdu_generate_keyimage(void)
     generate_keyimage_for_address(&G_bytecoin_vstate.wallet_keys, output_secret_hash_arg, len, address_index, &result);
 
     insert_keyimage(result);
-    PRINT_PRIMITIVE(result);
 
     return SW_NO_ERROR;
 }
@@ -170,20 +177,12 @@ int bytecoin_apdu_sig_add_input_finish(void)
 int bytecoin_apdu_sig_add_output(void)
 {
     const uint8_t change                = fetch_var(uint8_t);
-    uint64_t amount               = fetch_var(uint64_t);
+    const uint64_t amount               = fetch_var(uint64_t);
     const uint32_t change_address_index = fetch_var(uint32_t);
     const uint8_t dst_address_tag       = fetch_var(uint8_t);
     const public_key_t dst_address_s    = fetch_public_key();
     const public_key_t dst_address_s_v  = fetch_public_key();
     reset_io_buffer(&G_bytecoin_vstate.io_buffer);
-
-    PRINTF("change=%d\n", change);
-    PRINTF("amount=%d\n", (int)amount);
-    PRINTF("change_address_index=%d\n", change_address_index);
-    PRINTF("dst_address_tag=%d\n", dst_address_tag);
-    PRINT_PRIMITIVE(dst_address_s);
-    PRINT_PRIMITIVE(dst_address_s_v);
-
 
     public_key_t public_key;
     public_key_t encrypted_secret;
@@ -201,10 +200,6 @@ int bytecoin_apdu_sig_add_output(void)
                 &public_key,
                 &encrypted_secret,
                 &encrypted_address_type);
-
-    PRINT_PRIMITIVE(public_key);
-    PRINT_PRIMITIVE(encrypted_secret);
-    PRINTF("encrypted_address_type=%d\n", encrypted_address_type);
 
     insert_public_key(public_key);
     insert_public_key(encrypted_secret);
@@ -237,14 +232,11 @@ int bytecoin_apdu_sig_add_extra(void)
 int bytecoin_apdu_sig_step_a(void)
 {
     const uint8_t len = fetch_var(uint8_t);
-    PRINTF("len=%d\n", (int)len);
     if (len > BYTECOIN_MAX_BUFFER_SIZE)
         THROW(SW_NOT_ENOUGH_MEMORY);
     uint8_t output_secret_hash_arg[BYTECOIN_MAX_BUFFER_SIZE];
     fetch_bytes_from_io_buffer(&G_bytecoin_vstate.io_buffer, output_secret_hash_arg, len);
-    PRINTF("output_secret_hash_arg: %.*h\n", len, output_secret_hash_arg);
     const uint32_t address_index = fetch_var(uint32_t);
-    PRINTF("address_index=%d\n", address_index);
     reset_io_buffer(&G_bytecoin_vstate.io_buffer);
 
     elliptic_curve_point_t sig_p;
@@ -259,10 +251,6 @@ int bytecoin_apdu_sig_step_a(void)
                &sig_p,
                &y,
                &z);
-
-    PRINT_PRIMITIVE(sig_p);
-    PRINT_PRIMITIVE(y);
-    PRINT_PRIMITIVE(z);
 
     insert_point(sig_p);
     insert_point(y);

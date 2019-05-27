@@ -1,5 +1,22 @@
-#ifndef KEYS_H
-#define KEYS_H
+/*******************************************************************************
+*   Bytecoin Wallet for Ledger Nano S
+*   (c) 2018 - 2019 The Bytecoin developers
+*
+*  Licensed under the Apache License, Version 2.0 (the "License");
+*  you may not use this file except in compliance with the License.
+*  You may obtain a copy of the License at
+*
+*      http://www.apache.org/licenses/LICENSE-2.0
+*
+*  Unless required by applicable law or agreed to in writing, software
+*  distributed under the License is distributed on an "AS IS" BASIS,
+*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+*  See the License for the specific language governing permissions and
+*  limitations under the License.
+********************************************************************************/
+
+#ifndef BYTECOIN_KEYS_H
+#define BYTECOIN_KEYS_H
 
 #include "bytecoin_crypto.h"
 
@@ -44,12 +61,6 @@ void unlinkable_derive_output_public_key(
         public_key_t* output_public_key,
         public_key_t* encrypted_output_secret);
 
-//void generate_signature_H(
-//        const hash_t* prefix_hash,
-//        const public_key_t* sec_H,
-//        const secret_key_t* sec,
-//        signature_t* result);
-
 void generate_proof_H(const secret_key_t* s, signature_t* result);
 
 size_t encode_address(
@@ -61,4 +72,4 @@ size_t encode_address(
 
 void short_address(char* addr_str, size_t size);
 
-#endif // KEYS_H
+#endif // BYTECOIN_KEYS_H

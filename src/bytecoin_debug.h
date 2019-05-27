@@ -15,13 +15,17 @@
 *  limitations under the License.
 ********************************************************************************/
 
-#include "bytecoin_vars.h"
+#ifndef BYTECOIN_DEBUG_H
+#define BYTECOIN_DEBUG_H
 
-void init_vstate(bytecoin_v_state_t* state)
-{
-    init_io_buffer(&state->io_buffer);
-    init_signing_state(&state->sig_state);
-    init_wallet_keys(&state->wallet_keys);
-    init_ui_data(&state->ui_data);
-    init_io_call_params(&state->prev_io_call_params);
-}
+#include "os.h"
+
+#define STR(x)  #x
+#define XSTR(x) STR(x)
+
+#define PRINT_PRIMITIVE(primitive) \
+    PRINTF(XSTR(primitive)": %.*h\n", sizeof((primitive).data), (primitive).data);
+#define PRINT_BUF(buf) \
+    PRINTF(XSTR(buf)": %.*h\n", sizeof(buf), (buf));
+
+#endif // BYTECOIN_DEBUG_H

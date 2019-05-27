@@ -4,7 +4,6 @@ endif
 include $(BOLOS_SDK)/Makefile.defines
 
 #Bytecoin /44'/204'
-#--appFlags 0x40
 #--path "2147484108/2147483852"
 APP_LOAD_PARAMS= --appFlags 0x40 --curve secp256k1 $(COMMON_LOAD_PARAMS)
 APPNAME = "Bytecoin"
@@ -15,9 +14,9 @@ else
 ICONNAME = images/icon_bytecoin.gif
 endif
 
-APPVERSION_M=0
-APPVERSION_N=1
-APPVERSION_P=1
+APPVERSION_M=1
+APPVERSION_N=0
+APPVERSION_P=0
 
 APPVERSION=$(APPVERSION_M).$(APPVERSION_N).$(APPVERSION_P)
 SPECVERSION="Amethyst"

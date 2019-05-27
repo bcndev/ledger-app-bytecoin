@@ -1,25 +1,34 @@
+/*******************************************************************************
+*   Bytecoin Wallet for Ledger Nano S
+*   (c) 2018 - 2019 The Bytecoin developers
+*
+*  Licensed under the Apache License, Version 2.0 (the "License");
+*  you may not use this file except in compliance with the License.
+*  You may obtain a copy of the License at
+*
+*      http://www.apache.org/licenses/LICENSE-2.0
+*
+*  Unless required by applicable law or agreed to in writing, software
+*  distributed under the License is distributed on an "AS IS" BASIS,
+*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+*  See the License for the specific language governing permissions and
+*  limitations under the License.
+********************************************************************************/
+
 #include "os.h"
 #include "cx.h"
 #include "os_io_seproxyhal.h"
-
-#include "bytecoin_keys.h"
 #include "bytecoin_ledger_api.h"
 #include "bytecoin_vars.h"
 #include "bytecoin_apdu.h"
 #include "bytecoin_ui.h"
 
-#include "bytecoin_fe.h" //for dbg only
-
 bytecoin_v_state_t G_bytecoin_vstate;
-
-//#define insert_var(var) \
-//    insert_var_to_io_buffer(&G_bytecoin_vstate.io_buffer, var, sizeof(var))
 
 int dispatch(uint8_t cla, uint8_t ins)
 {
     int sw = SW_INS_NOT_SUPPORTED;
 
-//    PRINTF("dispatch cla=%d, ins=%d\n", (int)cla, (int)ins);
     if (cla != BYTECOIN_CLA)
     {
         THROW(SW_CLA_NOT_SUPPORTED);
@@ -94,14 +103,12 @@ void bytecoin_main(void)
             TRY {
                 io_do(&G_bytecoin_vstate.prev_io_call_params, &G_bytecoin_vstate.io_buffer, io_flags);
                 sw = dispatch(G_bytecoin_vstate.prev_io_call_params.cla, G_bytecoin_vstate.prev_io_call_params.ins);
-//                PRINTF("main=%d\n", (int)sw);
             }
             CATCH_OTHER(e) {
                 clear_io_buffer(&G_bytecoin_vstate.io_buffer);
 
                 if ((e & 0xF000) != 0x6000 && (e & 0xF000) != 0x9000)
                 {
-//                    PRINTF("catch e=%d\n", (int)e);
                     insert_var(e);
                     sw = SW_SOMETHING_WRONG;
                 }
@@ -111,15 +118,11 @@ void bytecoin_main(void)
             FINALLY {
                 if (sw)
                 {
-//                    PRINTF("10 sw=%d\n", (int)sw);
                     insert_var(sw);
-//                    PRINTF("11 io_flags=%d\n", io_flags);
                     io_flags = 0;
                 }
                 else
-                {
                   io_flags = IO_ASYNCH_REPLY;
-                }
             }
         }
         END_TRY;

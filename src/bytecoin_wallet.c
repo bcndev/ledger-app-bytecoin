@@ -1,7 +1,24 @@
+/*******************************************************************************
+*   Bytecoin Wallet for Ledger Nano S
+*   (c) 2018 - 2019 The Bytecoin developers
+*
+*  Licensed under the Apache License, Version 2.0 (the "License");
+*  you may not use this file except in compliance with the License.
+*  You may obtain a copy of the License at
+*
+*      http://www.apache.org/licenses/LICENSE-2.0
+*
+*  Unless required by applicable law or agreed to in writing, software
+*  distributed under the License is distributed on an "AS IS" BASIS,
+*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+*  See the License for the specific language governing permissions and
+*  limitations under the License.
+********************************************************************************/
+
 #include "os.h"
 #include "bytecoin_wallet.h"
 #include "bytecoin_keys.h"
-#include "bytecoin_ledger_api.h"
+#include "bytecoin_debug.h"
 
 // m/44'/204'/1'/0/0
 static const uint32_t  path[] = {
@@ -193,7 +210,7 @@ void generate_random_keys(
     fast_hash(bcn_str, sizeof(bcn_str) - 1, random_seed);
     fast_hash(bcn_str, sizeof(bcn_str) - 1, encryption_key);
 #else
-    generate_random_bytes(random_seed->data, sizeof(random_seed->data));
+    generate_random_bytes(random_seed->data,    sizeof(random_seed->data));
     generate_random_bytes(encryption_key->data, sizeof(encryption_key->data));
 #endif
 }

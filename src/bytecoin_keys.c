@@ -1,7 +1,26 @@
+/*******************************************************************************
+*   Bytecoin Wallet for Ledger Nano S
+*   (c) 2018 - 2019 The Bytecoin developers
+*
+*  Licensed under the Apache License, Version 2.0 (the "License");
+*  you may not use this file except in compliance with the License.
+*  You may obtain a copy of the License at
+*
+*      http://www.apache.org/licenses/LICENSE-2.0
+*
+*  Unless required by applicable law or agreed to in writing, software
+*  distributed under the License is distributed on an "AS IS" BASIS,
+*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+*  See the License for the specific language governing permissions and
+*  limitations under the License.
+********************************************************************************/
+
+#include "os.h"
 #include "bytecoin_keys.h"
 #include "bytecoin_fe.h"
 #include "bytecoin_ledger_api.h"
 #include "bytecoin_base58.h"
+#include "bytecoin_debug.h"
 
 static const char address_str[] = "address";
 
@@ -181,31 +200,6 @@ void random_scalar(elliptic_curve_scalar_t* result)
     generate_random_bytes(h_result.data, sizeof(h_result.data));
     reduce32(&h_result, result);
 }
-
-//void generate_signature_H(
-//        const hash_t* prefix_hash,
-//        const public_key_t* sec_H,
-//        const secret_key_t* sec,
-//        signature_t* result)
-//{
-//    elliptic_curve_scalar_t k;
-//    random_scalar(&k);
-
-//    {
-//        keccak_hasher_t hasher;
-//        keccak_init(&hasher);
-//        keccak_update(&hasher, prefix_hash->data, sizeof(prefix_hash->data));
-//        keccak_update(&hasher, sec_H->data, sizeof(sec_H->data));
-//        elliptic_curve_point_t H_k;
-//        ecmul_H(&k, &H_k);
-//        keccak_update(&hasher, H_k.data, sizeof(H_k.data));
-//        keccak_final_to_scalar(&hasher, &result->c);
-//    }
-//    elliptic_curve_scalar_t sec_c;
-//    ecmulm(&result->c, sec, &sec_c);
-
-//    ecsubm(&k, &sec_c, &result->r);
-//}
 
 void generate_proof_H(const secret_key_t* s, signature_t* result)
 {

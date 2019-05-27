@@ -1,7 +1,22 @@
+/*******************************************************************************
+*   Bytecoin Wallet for Ledger Nano S
+*   (c) 2018 - 2019 The Bytecoin developers
+*
+*  Licensed under the Apache License, Version 2.0 (the "License");
+*  you may not use this file except in compliance with the License.
+*  You may obtain a copy of the License at
+*
+*      http://www.apache.org/licenses/LICENSE-2.0
+*
+*  Unless required by applicable law or agreed to in writing, software
+*  distributed under the License is distributed on an "AS IS" BASIS,
+*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+*  See the License for the specific language governing permissions and
+*  limitations under the License.
+********************************************************************************/
+
 #include "bytecoin_fe.h"
 #include "bytecoin_vars.h"
-
-// kind of black magic
 
 extern const uint8_t C_ED25519_FIELD[];
 
@@ -67,6 +82,8 @@ static const uint8_t C_fe_sqrtm1[] = {
     0x2b, 0x83, 0x24, 0x80, 0x4f, 0xc1, 0xdf, 0x0b, 0x2b, 0x4d, 0x00, 0x99, 0x3d, 0xfb, 0xd7, 0xa7,
     0x2f, 0x43, 0x18, 0x06, 0xad, 0x2f, 0xe4, 0x78, 0xc4, 0xee, 0x1b, 0x27, 0x4a, 0x0e, 0xa0, 0xb0
 };
+
+#if 0
 
 static const uint8_t C_ONE[] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -151,8 +168,7 @@ bool is_scalar_negative(const elliptic_curve_scalar_t* a)
     return a->data[31] & 1;
 }
 
-//void ge_fromfe_frombytes(const hash_t* bytes, elliptic_curve_point_t* result)
-void old_ge_fromfe_frombytes(const hash_t* bytes, elliptic_curve_point_t* result)
+void ge_fromfe_frombytes(const hash_t* bytes, elliptic_curve_point_t* result)
 {
     union
     {
@@ -266,7 +282,8 @@ void old_ge_fromfe_frombytes(const hash_t* bytes, elliptic_curve_point_t* result
    compress_point(&un.Pxy, result);
 }
 
-//void old_ge_fromfe_frombytes(const hash_t* bytes, elliptic_curve_point_t* result)
+#else
+
 void ge_fromfe_frombytes(const hash_t* bytes, elliptic_curve_point_t* result)
 {
     #define  MOD (unsigned char *)C_ED25519_FIELD,32
@@ -401,3 +418,5 @@ void ge_fromfe_frombytes(const hash_t* bytes, elliptic_curve_point_t* result)
 
     #undef Pxy
 }
+
+#endif

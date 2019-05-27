@@ -1,3 +1,21 @@
+/*******************************************************************************
+*   Bytecoin Wallet for Ledger Nano S
+*   (c) 2018 - 2019 The Bytecoin developers
+*
+*  Licensed under the Apache License, Version 2.0 (the "License");
+*  you may not use this file except in compliance with the License.
+*  You may obtain a copy of the License at
+*
+*      http://www.apache.org/licenses/LICENSE-2.0
+*
+*  Unless required by applicable law or agreed to in writing, software
+*  distributed under the License is distributed on an "AS IS" BASIS,
+*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+*  See the License for the specific language governing permissions and
+*  limitations under the License.
+********************************************************************************/
+
+#include <string.h>
 #include "os_io_seproxyhal.h"
 #include "bytecoin_ui.h"
 #include "bytecoin_ledger_api.h"
@@ -5,10 +23,7 @@
 #include "bytecoin_vars.h"
 #include "bytecoin_keys.h"
 #include "bytecoin_apdu.h"
-//#include "bytecoin_io.h"
-//#include "bytecoin_sig.h"
-#include <string.h>
-
+#include "bytecoin_debug.h"
 
 extern unsigned char G_io_seproxyhal_spi_buffer[IO_SEPROXYHAL_BUFFER_SIZE_B];
 ux_state_t ux;
@@ -28,11 +43,10 @@ void init_ui_data(ui_data_t* ui_data)
 
 #if CX_APILEVEL == 8
 #define PIN_VERIFIED (!0)
-#elif CX_APILEVEL == 9 ||  CX_APILEVEL == 10
-
+#elif CX_APILEVEL == 9 || CX_APILEVEL == 10
 #define PIN_VERIFIED BOLOS_UX_OK
 #else
-#error CX_APILEVEL not  supported
+#error CX_APILEVEL not supported
 #endif
 
 static
@@ -130,7 +144,6 @@ const bagl_element_t* ui_menu_info_preprocessor(const ux_menu_entry_t* entry, ba
 {
     if (entry == &ui_menu_info[1])
     {
-//        PRINTF("userid: %d\n", element->component.userid);
         switch (element->component.userid)
         {
         case MENU_CURRENT_ENTRY_ID:
@@ -228,7 +241,6 @@ unsigned int ui_export_viewkey_button(unsigned int button_mask, unsigned int but
         sw = SW_SECURITY_STATUS_NOT_SATISFIED;
         break;
     case BUTTON_EVT_RELEASED | BUTTON_RIGHT:  // OK
-//        sw = bytecoin_apdu_export_view_only_impl(true);
           return user_confirm_view_outgoing_addresses();
         break;
     default:
@@ -459,7 +471,6 @@ static const ux_menu_entry_t ui_menu_confirm_tx[] = {
 static
 const bagl_element_t* ui_menu_confirm_tx_preprocessor(const ux_menu_entry_t* entry, bagl_element_t* element)
 {
-//    const confirm_tx_params_t* params = &G_bytecoin_vstate.io_buffer.confirm_tx_params;
     const bytecoin_signing_state_t* sig_state = &G_bytecoin_vstate.sig_state;
     if (entry == &ui_menu_confirm_tx[0])
     {
@@ -470,8 +481,8 @@ const bagl_element_t* ui_menu_confirm_tx_preprocessor(const ux_menu_entry_t* ent
             break;
         case MENU_CURRENT_ENTRY_LINE2_ID:
             {
-                const uint64_t prefix = (/*params->address_tag*/sig_state->dst_address_tag == BYTECOIN_UNLINKABLE_ADDRESS_TAG) ? BYTECOIN_ADDRESS_BASE58_PREFIX_AMETHYST : BYTECOIN_ADDRESS_BASE58_PREFIX;
-                encode_address(prefix, /*&params->address_s*/ &sig_state->dst_address_s, /*&params->address_sv*/ &sig_state->dst_address_s_v, G_bytecoin_vstate.ui_data.address_str, sizeof(G_bytecoin_vstate.ui_data.address_str) - 1);
+                const uint64_t prefix = (sig_state->dst_address_tag == BYTECOIN_UNLINKABLE_ADDRESS_TAG) ? BYTECOIN_ADDRESS_BASE58_PREFIX_AMETHYST : BYTECOIN_ADDRESS_BASE58_PREFIX;
+                encode_address(prefix, &sig_state->dst_address_s, &sig_state->dst_address_s_v, G_bytecoin_vstate.ui_data.address_str, sizeof(G_bytecoin_vstate.ui_data.address_str) - 1);
 
                 element->component.stroke = 10;  // 1 sec stop in each way
                 element->component.icon_id = 35; // roundtrip speed in pixel/s
@@ -492,7 +503,7 @@ const bagl_element_t* ui_menu_confirm_tx_preprocessor(const ux_menu_entry_t* ent
             break;
         case MENU_CURRENT_ENTRY_LINE2_ID:
             {
-                const size_t len = amount2str(/*params->amount*/sig_state->dst_amount, G_bytecoin_vstate.ui_data.address_str, sizeof(G_bytecoin_vstate.ui_data.address_str));
+                const size_t len = amount2str(sig_state->dst_amount, G_bytecoin_vstate.ui_data.address_str, sizeof(G_bytecoin_vstate.ui_data.address_str));
                 if (len + sizeof(BCN_str) > sizeof(G_bytecoin_vstate.ui_data.address_str))
                     THROW(SW_NOT_ENOUGH_MEMORY);
                 ;
@@ -517,7 +528,7 @@ const bagl_element_t* ui_menu_confirm_tx_preprocessor(const ux_menu_entry_t* ent
             break;
         case MENU_CURRENT_ENTRY_LINE2_ID:
             {
-                const size_t len = amount2str(/*params->fee*/sig_state->dst_fee, G_bytecoin_vstate.ui_data.address_str, sizeof(G_bytecoin_vstate.ui_data.address_str));
+                const size_t len = amount2str(sig_state->dst_fee, G_bytecoin_vstate.ui_data.address_str, sizeof(G_bytecoin_vstate.ui_data.address_str));
                 if (len + sizeof(BCN_str) > sizeof(G_bytecoin_vstate.ui_data.address_str))
                     THROW(SW_NOT_ENOUGH_MEMORY);
                 os_memmove(G_bytecoin_vstate.ui_data.address_str + len, BCN_str, sizeof(BCN_str));

@@ -1,19 +1,29 @@
+/*******************************************************************************
+*   Bytecoin Wallet for Ledger Nano S
+*   (c) 2018 - 2019 The Bytecoin developers
+*
+*  Licensed under the Apache License, Version 2.0 (the "License");
+*  you may not use this file except in compliance with the License.
+*  You may obtain a copy of the License at
+*
+*      http://www.apache.org/licenses/LICENSE-2.0
+*
+*  Unless required by applicable law or agreed to in writing, software
+*  distributed under the License is distributed on an "AS IS" BASIS,
+*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+*  See the License for the specific language governing permissions and
+*  limitations under the License.
+********************************************************************************/
+
 #ifndef BYTECOIN_CRYPTO_H
 #define BYTECOIN_CRYPTO_H
 
-#include "os.h"
-#include "cx.h"
 #include "bytecoin_keccak.h"
 
 typedef struct hash_s
 {
     uint8_t data[32];
 } hash_t;
-
-//typedef struct hash64_s
-//{
-//    uint8_t data[64];
-//} hash64_t;
 
 typedef struct elliptic_curve_point_s
 {
@@ -31,27 +41,19 @@ typedef struct signature_s
     elliptic_curve_scalar_t r;
 } signature_t;
 
-//typedef struct chacha_key_s
-//{
-//    uint8_t data[32];
-//} chacha_key_t;
-
 typedef elliptic_curve_point_t  keyimage_t;
 typedef elliptic_curve_point_t  public_key_t;
 typedef elliptic_curve_scalar_t secret_key_t;
 
-//void reverse32(uint8_t* reversed, const uint8_t* data);
 void reverse(uint8_t* reversed, const uint8_t* data, size_t len);
 size_t encode_varint(uint64_t value, uint8_t* buf);
 
-void generate_random_bytes(uint8_t* buf, size_t len);
+#define generate_random_bytes(buf, len) cx_rng((buf), (len))
 
 void fast_hash(const void* buf, size_t len, hash_t* result);
 void hash_to_scalar(const void* buf, size_t len, elliptic_curve_scalar_t* result);
 void hash_to_scalar64(const void* buf, size_t len, elliptic_curve_scalar_t* result);
 
-//elliptic_curve_point_t hash_to_good_point(const void* buf, uint32_t len);
-//elliptic_curve_point_t hash_to_bad_point(const void* buf, uint32_t len);
 void hash_point_to_good_point(const elliptic_curve_point_t* p, elliptic_curve_point_t* result);
 void hash_scalar_to_good_point(const elliptic_curve_scalar_t* s, elliptic_curve_point_t* result);
 
@@ -71,7 +73,6 @@ void invert32(const elliptic_curve_scalar_t* a, elliptic_curve_scalar_t* result)
 void ecmulm(const elliptic_curve_scalar_t* a, const elliptic_curve_scalar_t* b, elliptic_curve_scalar_t* result);
 void ecaddm(const elliptic_curve_scalar_t* a, const elliptic_curve_scalar_t* b, elliptic_curve_scalar_t* result);
 void ecsubm(const elliptic_curve_scalar_t* a, const elliptic_curve_scalar_t* b, elliptic_curve_scalar_t* result);
-//elliptic_curve_scalar_t ecpowm(const elliptic_curve_scalar_t* a, const elliptic_curve_scalar_t* e);
 void ecmul(const elliptic_curve_point_t* P, const elliptic_curve_scalar_t* scalar, elliptic_curve_point_t* result);
 void ecadd(const elliptic_curve_point_t* P, const elliptic_curve_point_t* Q, elliptic_curve_point_t* result);
 void ecsub(const elliptic_curve_point_t* P, const elliptic_curve_point_t* Q, elliptic_curve_point_t* result);
